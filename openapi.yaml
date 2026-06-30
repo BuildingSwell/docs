@@ -1,0 +1,2159 @@
+openapi: 3.0.3
+info:
+  title: BuildingSwell Public API
+  version: 2.0.0
+  description: |
+    BuildingSwell v2 Public API. All endpoints require the `X-API-Key` header.
+    Keys are scoped to your organization — all data is automatically filtered.
+
+    See the [Guides](/index) for querying, filtering, joins, and response formats.
+
+servers:
+  - url: https://{instance}/api/v2
+    description: Your BuildingSwell instance
+    variables:
+      instance:
+        default: app.buildingswell.com
+        description: Your BuildingSwell host
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Projects
+    description: Top-level project groupings
+  - name: Stages
+    description: Stage Masters — reusable department-scoped shop stations
+  - name: Deliverables
+    description: Work-tree nodes (orders, routes, phases, stages, steps, etc.)
+  - name: Work sessions
+    description: Work sessions on deliverables
+  - name: Comments
+    description: Comments on deliverables
+  - name: Documents
+    description: Documents attached to deliverables
+  - name: Notes
+    description: Notes on deliverables
+  - name: Notifications
+    description: Notifications and read-state
+  - name: QC
+    description: QC inspection sets and templates
+  - name: Dependencies
+    description: Dependency links between deliverables
+  - name: Workers
+    description: Workforce roster
+  - name: Timesheets
+    description: Unified time-tracking records (read-only)
+  - name: Organization
+    description: Roles, members, and API keys
+  - name: Concepts
+    description: Concept-aware deliverable endpoints with validation
+
+paths:
+  /project:
+    get:
+      tags: [Projects]
+      summary: List projects
+      description: List and filter project records. Supports pagination, sorting, search, and filters.
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/orderBy'
+        - $ref: '#/components/parameters/select'
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+    post:
+      tags: [Projects]
+      summary: Create project(s)
+      description: Create one or many project records.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/ProjectCreate'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '200':
+          description: Created project(s)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - $ref: '#/components/schemas/MultiResponse'
+
+  /project/{id}:
+    get:
+      tags: [Projects]
+      summary: Get project
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Project record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleResponse'
+    patch:
+      tags: [Projects]
+      summary: Update project
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleResponse'
+    put:
+      tags: [Projects]
+      summary: Upsert project
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '200':
+          description: Upserted project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleResponse'
+    delete:
+      tags: [Projects]
+      summary: Delete project
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted
+
+  /project/count:
+    get:
+      tags: [Projects]
+      summary: Count projects
+      parameters:
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: Count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountResponse'
+    post:
+      tags: [Projects]
+      summary: Count projects (large filter)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: Count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountResponse'
+
+  /project/query:
+    post:
+      tags: [Projects]
+      summary: Query projects
+      description: List projects when the filter is too large for a GET query string.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+
+  /project/bulk:
+    patch:
+      tags: [Projects]
+      summary: Bulk update projects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated records
+    put:
+      tags: [Projects]
+      summary: Bulk upsert projects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+      responses:
+        '200':
+          description: Upserted records
+
+  /project/group-and-count:
+    post:
+      tags: [Projects]
+      summary: Group and count projects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupAndCountBody'
+      responses:
+        '200':
+          description: Grouped counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupAndCountResponse'
+
+  /stage:
+    get:
+      tags: [Stages]
+      summary: List stage masters
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: List of stage masters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+    post:
+      tags: [Stages]
+      summary: Create stage master(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, shopId, maxOrderCapacity]
+              properties:
+                name:
+                  type: string
+                shopId:
+                  type: string
+                  format: uuid
+                description:
+                  type: string
+                  nullable: true
+                maxOrderCapacity:
+                  type: integer
+                  minimum: 0
+                costCode:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Created stage master(s)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleResponse'
+
+  /stage/{id}:
+    get:
+      tags: [Stages]
+      summary: Get stage master
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Stage master
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleResponse'
+    patch:
+      tags: [Stages]
+      summary: Update stage master
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated stage master
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleResponse'
+    put:
+      tags: [Stages]
+      summary: Upsert stage master
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upserted stage master
+    delete:
+      tags: [Stages]
+      summary: Delete stage master
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted
+
+  /stage/query:
+    post:
+      tags: [Stages]
+      summary: Query stage masters
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: List of stage masters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+
+  /stage/group-and-count:
+    post:
+      tags: [Stages]
+      summary: Group and count stage masters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupAndCountBody'
+      responses:
+        '200':
+          description: Grouped counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupAndCountResponse'
+
+  /deliverable:
+    get:
+      tags: [Deliverables]
+      summary: List deliverables
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/orderBy'
+        - $ref: '#/components/parameters/select'
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: List of deliverables
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+    post:
+      tags: [Deliverables]
+      summary: Create deliverable(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/DeliverableCreate'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/DeliverableCreate'
+      responses:
+        '200':
+          description: Created deliverable(s)
+
+  /deliverable/{id}:
+    get:
+      tags: [Deliverables]
+      summary: Get deliverable
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Deliverable record
+    patch:
+      tags: [Deliverables]
+      summary: Update deliverable
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated deliverable
+    put:
+      tags: [Deliverables]
+      summary: Upsert deliverable
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upserted deliverable
+    delete:
+      tags: [Deliverables]
+      summary: Delete deliverable
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted
+
+  /deliverable/query:
+    post:
+      tags: [Deliverables]
+      summary: Query deliverables
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: List of deliverables
+
+  /deliverable/group-and-count:
+    post:
+      tags: [Deliverables]
+      summary: Group and count deliverables
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupAndCountBody'
+      responses:
+        '200':
+          description: Grouped counts
+
+  /deliverable/{id}/hierarchy:
+    get:
+      tags: [Deliverables]
+      summary: Get deliverable hierarchy
+      description: Returns all deliverables in the subtree rooted at the given id.
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Hierarchy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  values:
+                    type: array
+                    items:
+                      type: object
+                  totalCount:
+                    type: integer
+
+  /deliverable/groups:
+    post:
+      tags: [Deliverables]
+      summary: Group deliverables
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [groupBy]
+              properties:
+                groupBy:
+                  type: string
+                  enum: [project, stage, people, root, tags]
+      responses:
+        '200':
+          description: Grouped deliverables
+
+  /deliverable/reorder:
+    post:
+      tags: [Deliverables]
+      summary: Reorder deliverables
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rootParentId, orderedDeliverableIds]
+              properties:
+                rootParentId:
+                  type: string
+                  format: uuid
+                orderedDeliverableIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '204':
+          description: Reordered
+
+  /deliverable/crew-time:
+    get:
+      tags: [Deliverables]
+      summary: Get crew time
+      parameters:
+        - name: deliverableId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Crew time by deliverable id
+
+  /deliverable/root/{rootId}/schedule/{id}:
+    post:
+      tags: [Deliverables]
+      summary: Schedule a deliverable
+      parameters:
+        - name: rootId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startDate:
+                  type: string
+                  format: date-time
+                endDate:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Scheduled deliverable
+
+  /deliverable/schedule/batch:
+    post:
+      tags: [Deliverables]
+      summary: Batch schedule deliverables
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required: [rootParentId, targetId, startDate, endDate]
+                properties:
+                  rootParentId:
+                    type: string
+                    format: uuid
+                  targetId:
+                    type: string
+                    format: uuid
+                  startDate:
+                    type: string
+                    format: date-time
+                  endDate:
+                    type: string
+                    format: date-time
+      responses:
+        '200':
+          description: Batch scheduled
+
+  /deliverable/root/{rootId}/progress/{id}:
+    post:
+      tags: [Deliverables]
+      summary: Update deliverable progress
+      parameters:
+        - name: rootId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [waiting, todo, wip, rework, on-hold, done]
+                completed:
+                  type: number
+                wip:
+                  type: number
+                percentage:
+                  type: number
+      responses:
+        '200':
+          description: Updated deliverable
+
+  /deliverable/export:
+    get:
+      tags: [Deliverables]
+      summary: Export deliverables to Excel
+      description: Returns a .xlsx file (max 10,000 rows). Accepts the same filters as GET /deliverable.
+      parameters:
+        - $ref: '#/components/parameters/filter'
+        - name: timezone
+          in: query
+          schema:
+            type: string
+            example: America/New_York
+      responses:
+        '200':
+          description: Excel file
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  /deliverable/import:
+    post:
+      tags: [Deliverables]
+      summary: Import deliverables from Excel
+      description: Rate-limited to 100 requests/min. Only .xlsx, max 10 MB.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                timezone:
+                  type: string
+                  example: America/New_York
+      responses:
+        '200':
+          description: Import result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                  data:
+                    type: object
+
+  /comment:
+    get:
+      tags: [Comments]
+      summary: List comments
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+    post:
+      tags: [Comments]
+      summary: Create comment(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created comment(s)
+
+  /comment/{id}:
+    get:
+      tags: [Comments]
+      summary: Get comment
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Comment record
+    patch:
+      tags: [Comments]
+      summary: Update comment
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated comment
+    put:
+      tags: [Comments]
+      summary: Upsert comment
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upserted comment
+    delete:
+      tags: [Comments]
+      summary: Delete comment
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted
+
+  /comment/query:
+    post:
+      tags: [Comments]
+      summary: Query comments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: List of comments
+
+  /comment/group-and-count:
+    post:
+      tags: [Comments]
+      summary: Group and count comments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupAndCountBody'
+      responses:
+        '200':
+          description: Grouped counts
+
+  /document:
+    get:
+      tags: [Documents]
+      summary: List documents
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: List of documents
+    post:
+      tags: [Documents]
+      summary: Create document(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created document(s)
+
+  /document/{id}:
+    get:
+      tags: [Documents]
+      summary: Get document
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Document record
+    patch:
+      tags: [Documents]
+      summary: Update document
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated document
+    put:
+      tags: [Documents]
+      summary: Upsert document
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upserted document
+    delete:
+      tags: [Documents]
+      summary: Delete document
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted
+
+  /document/query:
+    post:
+      tags: [Documents]
+      summary: Query documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: List of documents
+
+  /note:
+    get:
+      tags: [Notes]
+      summary: List notes
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: List of notes
+    post:
+      tags: [Notes]
+      summary: Create note(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created note(s)
+
+  /note/{id}:
+    get:
+      tags: [Notes]
+      summary: Get note
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Note record
+    patch:
+      tags: [Notes]
+      summary: Update note
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated note
+    put:
+      tags: [Notes]
+      summary: Upsert note
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upserted note
+    delete:
+      tags: [Notes]
+      summary: Delete note
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted
+
+  /note/by-deliverable:
+    put:
+      tags: [Notes]
+      summary: Create or update note by deliverable
+      description: Creates if missing, updates if it exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deliverableId, content]
+              properties:
+                deliverableId:
+                  type: string
+                  format: uuid
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Note created or updated
+
+  /notification:
+    get:
+      tags: [Notifications]
+      summary: List notifications
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: List of notifications
+
+  /notification/{id}:
+    get:
+      tags: [Notifications]
+      summary: Get notification
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Notification record
+
+  /notification/read-channel-comments:
+    post:
+      tags: [Notifications]
+      summary: Mark channel comments as read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channelId]
+              properties:
+                channelId:
+                  type: string
+                  format: uuid
+      responses:
+        '204':
+          description: Marked as read
+
+  /notification/read-deliverable-documents:
+    post:
+      tags: [Notifications]
+      summary: Mark deliverable documents as read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deliverableId]
+              properties:
+                deliverableId:
+                  type: string
+                  format: uuid
+      responses:
+        '204':
+          description: Marked as read
+
+  /qc-inspection-set:
+    get:
+      tags: [QC]
+      summary: List QC inspection sets
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: List of QC inspection sets
+    post:
+      tags: [QC]
+      summary: Create QC inspection set(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created QC inspection set(s)
+
+  /qc-inspection-set/{id}:
+    get:
+      tags: [QC]
+      summary: Get QC inspection set
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: QC inspection set record
+    patch:
+      tags: [QC]
+      summary: Update QC inspection set
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated QC inspection set
+    delete:
+      tags: [QC]
+      summary: Delete QC inspection set
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted
+
+  /qc-template:
+    get:
+      tags: [QC]
+      summary: List QC templates
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: List of QC templates
+    post:
+      tags: [QC]
+      summary: Create QC template(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created QC template(s)
+
+  /qc-template/{id}:
+    get:
+      tags: [QC]
+      summary: Get QC template
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: QC template record
+    patch:
+      tags: [QC]
+      summary: Update QC template
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated QC template
+    delete:
+      tags: [QC]
+      summary: Delete QC template
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted
+
+  /deliverable/dependencies:
+    get:
+      tags: [Dependencies]
+      summary: List deliverable dependencies
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: List of dependencies
+    post:
+      tags: [Dependencies]
+      summary: Create dependency link(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created dependency link(s)
+
+  /deliverable/dependencies/{id}:
+    get:
+      tags: [Dependencies]
+      summary: Get dependency
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Dependency record
+    patch:
+      tags: [Dependencies]
+      summary: Update dependency
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated dependency
+    delete:
+      tags: [Dependencies]
+      summary: Delete dependency
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted
+
+  /deliverable/dependencies/{id}/hierarchy:
+    get:
+      tags: [Dependencies]
+      summary: Get dependency hierarchy
+      description: Returns all dependencies in the subtree rooted at the given id.
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Dependency hierarchy
+
+  /deliverable/work-sessions:
+    get:
+      tags: [Work sessions]
+      summary: List work sessions
+      responses:
+        '200':
+          description: List of work sessions
+    post:
+      tags: [Work sessions]
+      summary: Create work session(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Created work session(s)
+
+  /deliverable/work-sessions/save:
+    post:
+      tags: [Work sessions]
+      summary: Save work session assignments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assignments, shopId]
+              properties:
+                assignments:
+                  type: object
+                  additionalProperties:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+                  description: Worker id → deliverable ids
+                shopId:
+                  type: string
+                  format: uuid
+                startDate:
+                  type: string
+                  format: date-time
+                shouldStopEntireBatch:
+                  type: boolean
+                  default: false
+      responses:
+        '204':
+          description: Assignments saved
+
+  /deliverable/work-sessions/stop:
+    post:
+      tags: [Work sessions]
+      summary: Stop work sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deliverableIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                workerIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                endDate:
+                  type: string
+                  format: date-time
+      responses:
+        '204':
+          description: Sessions stopped
+
+  /worker:
+    get:
+      tags: [Workers]
+      summary: List workers
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: List of workers
+    post:
+      tags: [Workers]
+      summary: Create worker
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                customerIdentifier:
+                  type: string
+                teamId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                status:
+                  type: string
+                  enum: [active, inactive, terminated]
+      responses:
+        '200':
+          description: Created worker
+
+  /worker/{id}:
+    get:
+      tags: [Workers]
+      summary: Get worker
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Worker record
+    patch:
+      tags: [Workers]
+      summary: Update worker
+      description: Use `isArchived: true` to archive. Hard delete returns 403.
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated worker
+
+  /worker/query:
+    post:
+      tags: [Workers]
+      summary: Query workers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: List of workers
+
+  /worker/group-and-count:
+    post:
+      tags: [Workers]
+      summary: Group and count workers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupAndCountBody'
+      responses:
+        '200':
+          description: Grouped counts
+
+  /timesheet:
+    get:
+      tags: [Timesheets]
+      summary: List timesheets
+      description: Read-only resource. Aggregates attendance and work sessions.
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: List of timesheet records
+
+  /timesheet/{id}:
+    get:
+      tags: [Timesheets]
+      summary: Get timesheet
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Timesheet record
+
+  /timesheet/query:
+    post:
+      tags: [Timesheets]
+      summary: Query timesheets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: List of timesheet records
+
+  /timesheet/group-and-count:
+    post:
+      tags: [Timesheets]
+      summary: Group and count timesheets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupAndCountBody'
+      responses:
+        '200':
+          description: Grouped counts
+
+  /role:
+    get:
+      tags: [Organization]
+      summary: List roles
+      responses:
+        '200':
+          description: List of roles
+    post:
+      tags: [Organization]
+      summary: Create role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                permissionsV2:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Created role
+
+  /role/{id}/duplicate:
+    post:
+      tags: [Organization]
+      summary: Duplicate role
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Duplicated role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleResponse'
+
+  /organization-member:
+    get:
+      tags: [Organization]
+      summary: List organization members
+      responses:
+        '200':
+          description: List of members
+    post:
+      tags: [Organization]
+      summary: Invite organization member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                roleId:
+                  type: string
+                  format: uuid
+                roleType:
+                  type: string
+                  enum: [admin, custom]
+                  default: custom
+      responses:
+        '200':
+          description: Invited member
+
+  /organization-member/{id}:
+    patch:
+      tags: [Organization]
+      summary: Update organization member
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roleId:
+                  type: string
+                  format: uuid
+                roleType:
+                  type: string
+                  enum: [admin, custom]
+                workerId:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '200':
+          description: Updated member
+
+  /organization-member/{id}/deactivate:
+    patch:
+      tags: [Organization]
+      summary: Deactivate member
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deactivated
+
+  /organization-member/{id}/reactivate:
+    patch:
+      tags: [Organization]
+      summary: Reactivate member
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Reactivated
+
+  /organization-member/{id}/invite/resend:
+    post:
+      tags: [Organization]
+      summary: Resend invite
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Invite resent
+
+  /api-key:
+    get:
+      tags: [Organization]
+      summary: List API keys
+      description: Requires admin access.
+      responses:
+        '200':
+          description: List of API keys
+    post:
+      tags: [Organization]
+      summary: Create API key
+      description: The `secretKey` is returned exactly once and cannot be retrieved again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                permissionsV2:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Created API key (includes secretKey)
+
+  /api-key/{id}:
+    patch:
+      tags: [Organization]
+      summary: Update API key
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                permissionsV2:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Updated API key
+    delete:
+      tags: [Organization]
+      summary: Delete API key
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted
+
+  /concepts:
+    get:
+      tags: [Concepts]
+      summary: Get concept registry
+      description: Machine-readable registry of all domain concepts with nesting rules and required fields.
+      responses:
+        '200':
+          description: Concept registry
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  concepts:
+                    type: array
+                    items:
+                      type: object
+
+  /concepts/orders/{id}/context:
+    get:
+      tags: [Concepts]
+      summary: Get order context
+      parameters:
+        - $ref: '#/components/parameters/id'
+        - name: blockedLimit
+          in: query
+          schema:
+            type: integer
+            default: 25
+      responses:
+        '200':
+          description: Order context with rollup
+
+  /concepts/routes/{id}:
+    get:
+      tags: [Concepts]
+      summary: Get route summary
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Route summary with tree rollup
+
+  /concepts/stage-masters:
+    get:
+      tags: [Concepts]
+      summary: List stage masters
+      parameters:
+        - name: departmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Stage masters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  values:
+                    type: array
+                    items:
+                      type: object
+
+  /concepts/deliverables:
+    post:
+      tags: [Concepts]
+      summary: Create concept deliverable
+      description: Creates a deliverable with concept validation. Rejects invalid nesting and missing required data.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, name]
+              properties:
+                type:
+                  type: string
+                  enum: [order, route, overhead, template-phase, phase, component, stage, step, qcstep]
+                name:
+                  type: string
+                parentId:
+                  type: string
+                  format: uuid
+                rootParentId:
+                  type: string
+                  format: uuid
+                identifier:
+                  type: string
+                quantity:
+                  type: integer
+                cycleTimeSec:
+                  type: integer
+                durationSec:
+                  type: integer
+                peopleNum:
+                  type: integer
+                costCode:
+                  type: string
+                originTemplateId:
+                  type: string
+                  format: uuid
+                data:
+                  type: object
+      responses:
+        '201':
+          description: Created concept node
+
+  /concepts/deliverables/{id}:
+    patch:
+      tags: [Concepts]
+      summary: Update concept deliverable
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                costCode:
+                  type: string
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Updated concept node
+
+  /concepts/orders/from-route:
+    post:
+      tags: [Concepts]
+      summary: Create order from route
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [routeId, projectId, name]
+              properties:
+                routeId:
+                  type: string
+                  format: uuid
+                projectId:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                identifier:
+                  type: string
+                quantity:
+                  type: integer
+                dueDate:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: New order context
+
+  /concepts/deliverables/{id}/apply-route:
+    post:
+      tags: [Concepts]
+      summary: Apply route to deliverable
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [routeId]
+              properties:
+                routeId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Route applied
+
+  /concepts/root/{rootId}/progress/{id}/plan:
+    post:
+      tags: [Concepts]
+      summary: Preflight progress action
+      description: Returns proposed changes without writing. Use before destructive progress actions.
+      parameters:
+        - name: rootId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type:
+                  type: string
+                quantity:
+                  type: number
+      responses:
+        '200':
+          description: Preflight result
+
+  /concepts/root/{rootId}/progress/{id}/apply:
+    post:
+      tags: [Concepts]
+      summary: Apply progress action
+      description: Applies progress action with cascades. Stops work sessions and removes worker plans for done nodes.
+      parameters:
+        - name: rootId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type:
+                  type: string
+                quantity:
+                  type: number
+      responses:
+        '200':
+          description: Progress applied
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    pageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        default: 50
+    orderBy:
+      name: orderBy
+      in: query
+      schema:
+        type: string
+        example: name:asc
+    select:
+      name: select
+      in: query
+      schema:
+        type: string
+        example: id,name,identifier
+    search:
+      name: search
+      in: query
+      schema:
+        type: string
+    filter:
+      name: filter
+      in: query
+      schema:
+        type: string
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            missingPermissions:
+              type: array
+              items:
+                type: string
+
+    SingleResponse:
+      type: object
+      properties:
+        value:
+          type: object
+
+    MultiResponse:
+      type: object
+      properties:
+        values:
+          type: array
+          items:
+            type: object
+
+    ListResponse:
+      type: object
+      properties:
+        values:
+          type: array
+          items:
+            type: object
+        hasMore:
+          type: boolean
+
+    CountResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+
+    GroupAndCountBody:
+      type: object
+      required: [groupByField]
+      properties:
+        groupByField:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        unnestGroupByField:
+          type: boolean
+
+    GroupAndCountResponse:
+      type: object
+      properties:
+        values:
+          type: array
+          items:
+            type: object
+            properties:
+              groupId: {}
+              count:
+                type: integer
+        hasMore:
+          type: boolean
+
+    QueryBody:
+      type: object
+      properties:
+        filter:
+          type: string
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        orderBy:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        select:
+          type: array
+          items:
+            type: string
+
+    ProjectCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        scheduledStartDate:
+          type: string
+          format: date
+          nullable: true
+        scheduledEndDate:
+          type: string
+          format: date
+          nullable: true
+        actualEndDate:
+          type: string
+          format: date
+          nullable: true
+        costCode:
+          type: string
+          nullable: true
+        isArchived:
+          type: boolean
+          default: false
+
+    ProjectUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        scheduledStartDate:
+          type: string
+          format: date
+          nullable: true
+        scheduledEndDate:
+          type: string
+          format: date
+          nullable: true
+        actualEndDate:
+          type: string
+          format: date
+          nullable: true
+        costCode:
+          type: string
+          nullable: true
+        isArchived:
+          type: boolean
+
+    DeliverableCreate:
+      type: object
+      required: [type, name]
+      properties:
+        type:
+          type: string
+          enum: [order, route, overhead, template-phase, phase, component, stage, step, qcstep]
+        name:
+          type: string
+        quantity:
+          type: integer
+          default: 1
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+        data:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

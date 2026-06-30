@@ -1,0 +1,15 @@
+---
+title: Rate limits
+description: Request rate limits and response headers for the BuildingSwell v2 API.
+---
+
+| Endpoint | Limit |
+| -------- | ----- |
+| All endpoints | 3,000 requests / 60 sec |
+| `POST /*/import` | 100 requests / 60 sec |
+
+Headers returned with every response:
+
+- `RateLimit-Limit`
+- `RateLimit-Remaining`
+- `RateLimit-Reset`

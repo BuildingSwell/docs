@@ -1,0 +1,27 @@
+---
+title: Standard endpoints
+description: CRUD and query endpoints available on every v2 resource.
+---
+
+Every resource supports these endpoints (example uses `/project`):
+
+| Method | Path | What it does |
+| ------ | ---- | ------------ |
+| `GET` | `/project` | List / filter records |
+| `GET` | `/project/:id` | Get a single record |
+| `POST` | `/project` | Create one or many records |
+| `PATCH` | `/project/:id` | Partially update a record |
+| `PUT` | `/project/:id` | Upsert a record |
+| `DELETE` | `/project/:id` | Delete a record |
+| `GET` | `/project/count` | Count matching records |
+| `POST` | `/project/count` | Count (use when filter is large) |
+| `POST` | `/project/query` | List (use when filter is large) |
+| `PATCH` | `/project/bulk` | Update many records at once |
+| `PUT` | `/project/bulk` | Upsert many records |
+| `POST` | `/project/group-and-count` | Group by a field and count |
+
+<Note>
+  Bulk delete is not available on any resource.
+</Note>
+
+Some resources restrict which operations are available (for example, `timesheet` is read-only and `worker` rejects hard deletes). See each [resource page](/resources/project) for details.

@@ -1,0 +1,112 @@
+---
+title: Timesheet
+description: Unified view of all time-tracking records (read-only).
+---
+
+Unified view of all time-tracking records. Aggregates attendance check-ins and deliverable work sessions.
+
+<Warning>
+  **Read-only.** Only `GET /`, `GET /:id`, `GET /count`, `POST /count`, `POST /query`, and `POST /group-and-count` are available.
+</Warning>
+
+**Search columns:** `type`, `externalSync`, `externalSource`
+
+## Fields
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Auto-generated |
+| `organizationId` | UUID | From API key |
+| `startDate` | date | Session start (UTC) |
+| `endDate` | date \| null | Session end; `null` = still open |
+| `workerId` | UUID | Worker who performed the work; resolve via `worker` |
+| `type` | string | See types below |
+| `shopId` | UUID | Shop the session belongs to |
+| `isEdited` | boolean | Whether manually edited |
+| `lastUpdatedBy` | UUID \| null | User who last modified |
+| `buildOrderId` | UUID \| null | Order id; populated **only** for `build_order_work_session` records |
+| `overheadId` | UUID \| null | Populated **only** for `overhead_work_session` records |
+| `stageId` | UUID \| null | **Stage Master** id; populated **only** for `build_order_work_session` records |
+| `deliverableId` | UUID \| null | Populated **only** for `deliverable_work_session` records |
+| `shiftWorkHours` | object \| null | Shift schedule (see below) |
+| `externalSource` | string \| null | Source system, e.g. `"quickbase"` |
+| `externalSync` | string | `"synced"` \| `"not synced"` \| `"none"` |
+| `metadata` | object | Flexible key-value store (e.g. `costCode`, `unionCode`) |
+| `createdAt` | date | Auto-generated |
+| `updatedAt` | date | Auto-generated |
+
+## `type` values
+
+| Value | Description | Populated FK |
+| ----- | ----------- | ------------ |
+| `attendance` | Attendance check-in/out record | _(none)_ |
+| `deliverable_work_session` | Time logged against a specific deliverable node | `deliverableId` |
+| `build_order_work_session` | Time logged at the order level | `buildOrderId`, `stageId` |
+| `overhead_work_session` | Time logged against an overhead bucket | `overheadId` |
+
+Each row type populates a different foreign key (the others are `null`) — see the "Populated FK" column. This matters when joining: a `deliverable_work_session` links to the build tree **only** through `deliverableId`, while a `build_order_work_session` links through `buildOrderId`/`stageId`.
+
+## `shiftWorkHours` shape
+
+```json
+{
+  "startTime": "08:00",
+  "endTime": "17:00",
+  "breaks": [{ "startTime": "12:00", "durationInSec": 1800 }]
+}
+```
+
+Times are in `HH:mm` format. `breaks` is optional.
+
+## Example queries
+
+```bash
+# All open sessions (endDate is null)
+GET /timesheet?endDate:isn=true
+
+# Sessions for a specific worker in a date range
+GET /timesheet?workerId=<uuid>&startDate:ge=2024-03-01&startDate:lt=2024-04-01
+
+# Count by type
+POST /timesheet/group-and-count
+{ "groupByField": "type" }
+
+# Unsynced deliverable sessions
+GET /timesheet?type=deliverable_work_session&externalSync:ne=synced
+```
+
+## Loading hours with Order / Stage / Phase attribution
+
+For `deliverable_work_session` rows, the time is logged against a stage/phase/component node, and the **only** link to the build tree is `deliverableId` (`buildOrderId` and `stageId` are `null` for these rows). To attribute each row to its Order, Stage and Phase, join the deliverable node and then **chain** further joins off it:
+
+- a join's condition may reference **another join's alias** (not just the base table), so you can hop `timesheet → deliverable → order` in a single request;
+- declare the joins in dependency order — the join you reference (here `d`) must come **before** the joins that depend on it (`o`, `s`).
+
+```bash
+curl "https://<host>/api/v2/timesheet?type=deliverable_work_session\
+&startDate:ge=2024-03-01&startDate:lt=2024-04-01\
+&join:deliverable%20as%20d:id,name,type,rootParentId,data,computed=deliverableId%20eq%20d.id\
+&join:deliverable%20as%20o:id,name,identifier=o.id%20eq%20d.rootParentId\
+&join:stage%20as%20s:id,name=s.id%20eq%20d.data.stageId" \
+  -H "X-API-Key: <key>"
+```
+
+Each row comes back with:
+
+- `o.name`, `o.identifier` → the **Order** (joined via the node's `rootParentId`)
+- `s.name` → the **Stage Master** (joined via the node's `data.stageId`)
+- `d.computed.phase` → the **Phase name** (read straight off the joined node)
+
+<Note>
+  The `s` join matches `stage.id` against `data->>'stageId'`; the engine casts both sides to `uuid` automatically. Phase/component nodes won't have a Stage Master, so `s` is `null` for those rows — read `computed.phase` for the phase regardless.
+</Note>
+
+<Tip>
+  **Alternative (no chaining):** join only the deliverable node, read `d.computed.phase` directly, collect the distinct `d.rootParentId` / `d.data.stageId` values, and resolve their names with bulk `POST /deliverable/query` and `POST /stage/query` calls. Same result, more round-trips.
+</Tip>
+
+For `build_order_work_session` rows (order-level time), there is no deliverable node — join the Order and Stage Master directly off the timesheet's own keys:
+
+```http
+?join:deliverable as o:id,name,identifier=buildOrderId eq o.id&join:stage:id,name=stageId eq stage.id
+```

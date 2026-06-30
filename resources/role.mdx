@@ -1,0 +1,33 @@
+---
+title: Role
+description: Permission roles.
+---
+
+Permission roles. Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+
+**Search columns:** `name`, `description`
+
+<Info>
+  Requires admin access or the `Role.Read` / `Role.Update` permission.
+</Info>
+
+## Fields
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Auto-generated |
+| `organizationId` | UUID | From API key |
+| `name` | string | Required |
+| `description` | string \| null | |
+| `permissions` | string[] | Legacy permission strings |
+| `permissionsV2` | object[] | Fine-grained permission statements |
+| `createdAt` | date | Auto-generated |
+| `updatedAt` | date | Auto-generated |
+
+## Duplicate a role
+
+```http
+POST /role/:id/duplicate
+```
+
+Response: `{ "value": { ... } }` — a new role with a unique name and the same permissions.

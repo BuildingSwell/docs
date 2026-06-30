@@ -1,0 +1,40 @@
+---
+title: API key
+description: API keys for your organization.
+---
+
+API keys for your organization. All operations require **admin access**.
+
+<Warning>
+  The `secretKey` is **returned exactly once** on creation and cannot be retrieved again.
+</Warning>
+
+## Fields
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Auto-generated |
+| `organizationId` | UUID | From API key |
+| `appUser.name` | string | Display name |
+| `role.permissions` | string[] | Legacy permission strings |
+| `role.permissionsV2` | object[] | Fine-grained permission statements |
+| `createdAt` | date | Auto-generated |
+| `updatedAt` | date | Auto-generated |
+
+## Create an API key
+
+```http
+POST /api-key
+
+{
+  "name": "My Integration",
+  "permissions": [],
+  "permissionsV2": []
+}
+```
+
+The response includes `secretKey` — store it immediately, it won't be shown again.
+
+**Update an API key** (`PATCH /:id`) — updatable fields: `name`, `permissions`, `permissionsV2`.
+
+Standard `GET /`, `GET /:id`, `GET /count`, `POST /count`, and `DELETE /:id` are also available.

@@ -1,0 +1,25 @@
+---
+title: Project
+description: Projects group orders and other work in BuildingSwell.
+---
+
+**Identifier prefix:** `PROJ-`
+**Search columns:** `name`, `identifier`
+
+Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+
+## Fields
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Auto-generated |
+| `organizationId` | UUID | From API key |
+| `identifier` | string | Auto-generated, e.g. `PROJ-a1b2c` |
+| `name` | string | Required |
+| `scheduledStartDate` | date \| null | ISO 8601 |
+| `scheduledEndDate` | date \| null | ISO 8601 |
+| `actualEndDate` | date \| null | ISO 8601 |
+| `costCode` | string \| null | |
+| `isArchived` | boolean | Default `false` |
+| `createdAt` | date | Auto-generated |
+| `updatedAt` | date | Auto-generated |

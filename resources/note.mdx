@@ -1,0 +1,19 @@
+---
+title: Note
+description: Notes on deliverables.
+---
+
+Notes on deliverables. Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+
+## Create or update by deliverable
+
+Creates if missing, updates if it exists:
+
+```http
+PUT /note/by-deliverable
+
+{
+  "deliverableId": "<uuid>",
+  "content": "..."
+}
+```

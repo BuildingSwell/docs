@@ -1,0 +1,16 @@
+---
+title: Authentication
+description: Authenticate API requests with an organization-scoped API key.
+---
+
+Include your API key in every request:
+
+```http
+X-API-Key: <your-api-key>
+```
+
+Keys are scoped to your organization — all data is automatically filtered to that org.
+
+<Info>
+  API keys are created via the [`/api-key`](/resources/api-key) resource. The `secretKey` is returned exactly once on creation and cannot be retrieved again.
+</Info>

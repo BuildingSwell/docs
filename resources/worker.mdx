@@ -1,0 +1,80 @@
+---
+title: Worker
+description: The workforce roster.
+---
+
+The workforce roster. Use it to list workers and resolve the worker IDs returned elsewhere in the API (e.g. deliverable assignees, `timesheet.workerId`, QC inspection assignees) back to worker names — and to create, edit, archive, and restore workers.
+
+<Info>
+  **Authorization** is enforced at the record level via your `worker` permission: `read` for the `GET` endpoints, `create`/`update` for the writes below. Admins have full access. (In the role editor, the **People** composite grants worker create/update; read is also granted by Build, Planning, Attendance, Timesheets, and Teams.)
+</Info>
+
+<Warning>
+  **No hard delete.** Workers are archived, never deleted — `DELETE /worker/:id` and `DELETE /worker/bulk` return `403`. Archive via `PATCH /worker/:id { "isArchived": true }` instead.
+</Warning>
+
+**Search columns:** `name`, `customerIdentifier`
+
+## Fields
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Auto-generated; the value referenced by `workerId` elsewhere |
+| `organizationId` | UUID | From API key |
+| `name` | string | Required. Worker's display name |
+| `customerIdentifier` | string | Your external identifier (e.g. employee number). Default `''` |
+| `teamId` | UUID \| null | Team the worker belongs to. Default `null` |
+| `status` | string | `"active"` \| `"inactive"` \| `"terminated"`. Default `active` |
+| `isArchived` | boolean | Archived workers are retained so historical IDs still resolve. Default `false` |
+| `exemptFromAssignments` | boolean | Whether the worker is excluded from assignment planning. Default `false` |
+| `unionCode` | string \| null | Labor/union classification code. Default `null` |
+| `qbBadgeLink` | string \| null | QuickBase badge link (integration metadata). Default `null` |
+| `createdAt` | date | Auto-generated |
+| `updatedAt` | date | Auto-generated |
+
+Only `name` is required on create; every other field falls through to the default above.
+
+## Archive and restore
+
+There is no separate archive endpoint — flip `isArchived` with a `PATCH`:
+
+- **Archive** — `PATCH /worker/:id { "isArchived": true }`. The worker's `name` and `customerIdentifier` are suffixed with ` - (archived <n>)` so they don't collide with active records, `teamId` is cleared, and the worker's open work sessions and daily-plan assignments are ended.
+- **Restore** — `PATCH /worker/:id { "isArchived": false }`. The archived suffix is stripped and, if the original name is now taken by an active worker, the next free name is chosen (e.g. `Jane Doe (1)`).
+- An **archived worker is read-only** — any `PATCH` other than the restore (setting `isArchived` back to `false`) returns `400`.
+
+## Example queries
+
+```bash
+# List all workers (active and archived) to build an ID -> name map
+GET /worker
+
+# Resolve a specific set of worker IDs to names
+POST /worker/query
+{ "id": ["<uuid>", "<uuid>"], "select": ["id", "name"] }
+
+# Only active workers
+GET /worker?status=active&isArchived=false
+
+# Look up a worker by your own identifier
+GET /worker?customerIdentifier=E12345
+
+# Count workers by status
+POST /worker/group-and-count
+{ "groupByField": "status" }
+
+# Create a worker (only name is required)
+POST /worker
+{ "name": "Jane Doe", "customerIdentifier": "E12345" }
+
+# Edit a worker
+PATCH /worker/<uuid>
+{ "name": "Jane Q. Doe", "status": "inactive" }
+
+# Archive a worker
+PATCH /worker/<uuid>
+{ "isArchived": true }
+
+# Restore a worker
+PATCH /worker/<uuid>
+{ "isArchived": false }
+```

@@ -1,72 +1,320 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
-  "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
-  },
-  "favicon": "/favicon.svg",
-  "navigation": {
-    "pages": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
+  "theme": "maple",
+  "name": "BuildingSwell API",
+  "description": "Integrate with the BuildingSwell v2 Public API",
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/images/logo/light.svg",
+    "dark": "/images/logo/dark.svg",
+    "href": "https://www.buildingswell.com"
+  },
+  "favicon": "/images/logo/light.svg",
+  "colors": {
+    "primary": "#469CD0",
+    "light": "#E3E4EB",
+    "dark": "#2B6F94"
   },
   "navbar": {
     "links": [
       {
+        "label": "App",
+        "href": "https://app.buildingswell.com"
+      },
+      {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "https://www.buildingswell.com/support"
       }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
     ]
   },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+  "api": {
+    "openapi": "openapi.yaml",
+    "mdx": {
+      "server": "https://{instance}/api/v2",
+      "auth": {
+        "method": "key",
+        "name": "X-API-Key"
+      }
+    },
+    "playground": {
+      "display": "interactive",
+      "proxy": true
+    },
+    "examples": {
+      "languages": ["bash", "javascript", "python"],
+      "defaults": "all",
+      "autogenerate": true
     }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "icon": "book-open",
+        "groups": [
+          {
+            "group": "Getting started",
+            "icon": "rocket",
+            "pages": [
+              "index",
+              "getting-started/authentication",
+              "getting-started/rate-limits"
+            ]
+          },
+          {
+            "group": "Core concepts",
+            "icon": "layers",
+            "pages": [
+              "guides/standard-endpoints",
+              "guides/querying",
+              "guides/response-format",
+              "guides/group-and-count",
+              "guides/import-export"
+            ]
+          },
+          {
+            "group": "Resources",
+            "icon": "database",
+            "pages": [
+              "resources/project",
+              "resources/stage",
+              "resources/deliverable",
+              "resources/deliverable-dependencies",
+              "resources/deliverable-work-sessions",
+              "resources/comment",
+              "resources/document",
+              "resources/note",
+              "resources/notification",
+              "resources/qc-inspection-set",
+              "resources/qc-template",
+              "resources/timesheet",
+              "resources/worker",
+              "resources/role",
+              "resources/organization-member",
+              "resources/api-key"
+            ]
+          },
+          {
+            "group": "Domain concepts",
+            "icon": "git-branch",
+            "pages": ["concepts/overview"]
+          },
+          {
+            "group": "Examples",
+            "icon": "terminal",
+            "pages": ["examples"]
+          }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "icon": "square-terminal",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["api-reference/overview"]
+          },
+          {
+            "group": "Projects",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /project",
+              "GET /project/{id}",
+              "POST /project",
+              "PATCH /project/{id}",
+              "PUT /project/{id}",
+              "DELETE /project/{id}",
+              "GET /project/count",
+              "POST /project/count",
+              "POST /project/query",
+              "PATCH /project/bulk",
+              "PUT /project/bulk",
+              "POST /project/group-and-count"
+            ]
+          },
+          {
+            "group": "Stages",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /stage",
+              "GET /stage/{id}",
+              "POST /stage",
+              "PATCH /stage/{id}",
+              "PUT /stage/{id}",
+              "DELETE /stage/{id}",
+              "POST /stage/query",
+              "POST /stage/group-and-count"
+            ]
+          },
+          {
+            "group": "Deliverables",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /deliverable",
+              "GET /deliverable/{id}",
+              "POST /deliverable",
+              "PATCH /deliverable/{id}",
+              "PUT /deliverable/{id}",
+              "DELETE /deliverable/{id}",
+              "POST /deliverable/query",
+              "POST /deliverable/group-and-count",
+              "GET /deliverable/{id}/hierarchy",
+              "POST /deliverable/groups",
+              "POST /deliverable/reorder",
+              "GET /deliverable/crew-time",
+              "POST /deliverable/root/{rootId}/schedule/{id}",
+              "POST /deliverable/schedule/batch",
+              "POST /deliverable/root/{rootId}/progress/{id}",
+              "GET /deliverable/export",
+              "POST /deliverable/import"
+            ]
+          },
+          {
+            "group": "Work sessions",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /deliverable/work-sessions",
+              "POST /deliverable/work-sessions",
+              "POST /deliverable/work-sessions/save",
+              "POST /deliverable/work-sessions/stop"
+            ]
+          },
+          {
+            "group": "Dependencies",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /deliverable/dependencies",
+              "GET /deliverable/dependencies/{id}",
+              "POST /deliverable/dependencies",
+              "PATCH /deliverable/dependencies/{id}",
+              "DELETE /deliverable/dependencies/{id}",
+              "GET /deliverable/dependencies/{id}/hierarchy"
+            ]
+          },
+          {
+            "group": "Comments",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /comment",
+              "GET /comment/{id}",
+              "POST /comment",
+              "PATCH /comment/{id}",
+              "PUT /comment/{id}",
+              "DELETE /comment/{id}",
+              "POST /comment/query",
+              "POST /comment/group-and-count"
+            ]
+          },
+          {
+            "group": "Documents",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /document",
+              "GET /document/{id}",
+              "POST /document",
+              "PATCH /document/{id}",
+              "PUT /document/{id}",
+              "DELETE /document/{id}",
+              "POST /document/query"
+            ]
+          },
+          {
+            "group": "Notes",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /note",
+              "GET /note/{id}",
+              "POST /note",
+              "PATCH /note/{id}",
+              "PUT /note/{id}",
+              "DELETE /note/{id}",
+              "PUT /note/by-deliverable"
+            ]
+          },
+          {
+            "group": "Notifications",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /notification",
+              "GET /notification/{id}",
+              "POST /notification/read-channel-comments",
+              "POST /notification/read-deliverable-documents"
+            ]
+          },
+          {
+            "group": "QC",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /qc-inspection-set",
+              "GET /qc-inspection-set/{id}",
+              "POST /qc-inspection-set",
+              "PATCH /qc-inspection-set/{id}",
+              "DELETE /qc-inspection-set/{id}",
+              "GET /qc-template",
+              "GET /qc-template/{id}",
+              "POST /qc-template",
+              "PATCH /qc-template/{id}",
+              "DELETE /qc-template/{id}"
+            ]
+          },
+          {
+            "group": "Workers",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /worker",
+              "GET /worker/{id}",
+              "POST /worker",
+              "PATCH /worker/{id}",
+              "POST /worker/query",
+              "POST /worker/group-and-count"
+            ]
+          },
+          {
+            "group": "Timesheets",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /timesheet",
+              "GET /timesheet/{id}",
+              "POST /timesheet/query",
+              "POST /timesheet/group-and-count"
+            ]
+          },
+          {
+            "group": "Organization",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /role",
+              "POST /role",
+              "POST /role/{id}/duplicate",
+              "GET /organization-member",
+              "POST /organization-member",
+              "PATCH /organization-member/{id}",
+              "PATCH /organization-member/{id}/deactivate",
+              "PATCH /organization-member/{id}/reactivate",
+              "POST /organization-member/{id}/invite/resend",
+              "GET /api-key",
+              "POST /api-key",
+              "PATCH /api-key/{id}",
+              "DELETE /api-key/{id}"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /concepts",
+              "GET /concepts/orders/{id}/context",
+              "GET /concepts/routes/{id}",
+              "GET /concepts/stage-masters",
+              "POST /concepts/deliverables",
+              "PATCH /concepts/deliverables/{id}",
+              "POST /concepts/orders/from-route",
+              "POST /concepts/deliverables/{id}/apply-route",
+              "POST /concepts/root/{rootId}/progress/{id}/plan",
+              "POST /concepts/root/{rootId}/progress/{id}/apply"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

@@ -1,0 +1,24 @@
+---
+title: Group and count
+description: Group records by a field and return counts.
+---
+
+```http
+POST /deliverable/group-and-count
+
+{ "groupByField": "type" }
+```
+
+Group by multiple fields:
+
+```json
+{ "groupByField": ["computed.projectId", "type"] }
+```
+
+For array fields (e.g. tags), use `unnestGroupByField` to count individual values:
+
+```json
+{ "groupByField": "computed.tags", "unnestGroupByField": true }
+```
+
+All standard filter params work here too.

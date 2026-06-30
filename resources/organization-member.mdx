@@ -1,0 +1,63 @@
+---
+title: Organization member
+description: Members of the organization.
+---
+
+Members of the organization. Standard CRUD applies with a custom create — see below.
+
+**Search columns:** `appUser.name`, `appUser.email`
+
+<Info>
+  Requires admin access or the `User.Read` / `User.Update` permission.
+</Info>
+
+## Fields
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Auto-generated |
+| `organizationId` | UUID | From API key |
+| `appUserId` | UUID | Associated user account |
+| `roleId` | UUID \| null | Assigned role |
+| `roleType` | string | `"admin"` \| `"custom"` |
+| `status` | string | `"active"` \| `"deactivated"` |
+| `appUser.email` | string | Joined from user account |
+| `appUser.name` | string | Joined from user account |
+| `appUser.status` | string | `"pending"` \| `"verified"` |
+| `createdAt` | date | Auto-generated |
+| `updatedAt` | date | Auto-generated |
+
+## Invite a member
+
+Replaces standard `POST /`:
+
+```http
+POST /organization-member
+
+{
+  "email": "user@example.com",
+  "roleId": "<uuid>",
+  "roleType": "custom"
+}
+```
+
+Creates a new user account if the email doesn't exist yet and sends an invitation email.
+
+**Update a member** (`PATCH /:id`) — updatable fields: `roleId`, `roleType`, `workerId` (pass `null` to unlink worker).
+
+## Deactivate / reactivate
+
+```http
+PATCH /organization-member/:id/deactivate
+PATCH /organization-member/:id/reactivate
+```
+
+Both respond with `204 No Content`.
+
+## Resend invite
+
+```http
+POST /organization-member/:id/invite/resend
+```
+
+Response: `204 No Content`

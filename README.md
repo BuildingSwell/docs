@@ -1,55 +1,45 @@
-# Mintlify Starter Kit
+# BuildingSwell API docs (Mintlify)
 
-Use the starter kit to get your docs deployed and ready to customize.
+Mintlify documentation for the BuildingSwell v2 Public API.
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+## Preview locally
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
-
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
-
-## AI-assisted writing
-
-Set up your AI coding tool to work with Mintlify:
+Requires [Node.js 20.17+](https://nodejs.org/) and the Mintlify CLI:
 
 ```bash
-npx skills add https://mintlify.com/docs
-```
-
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
-
-See the [AI tools guides](/ai-tools) for tool-specific setup.
-
-## Development
-
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
-
-```
 npm i -g mint
-```
-
-Run the following command at the root of your documentation, where your `docs.json` is located:
-
-```
 mint dev
 ```
 
-View your local preview at `http://localhost:3000`.
+Open the URL printed by `mint dev` (typically `http://localhost:3000`).
 
-## Publishing changes
+## Validate
 
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
+```bash
+mint validate
+mint broken-links
+```
 
-## Need help?
+## Deploy to Mintlify
 
-### Troubleshooting
+1. Sign in at [mintlify.com](https://mintlify.com) and create a project (or open an existing one).
+2. Connect this GitHub repository.
+3. Deploy — Mintlify builds from `docs.json` and `openapi.yaml` at the repository root.
 
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
+### Mintlify dashboard MCP (optional)
 
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+If the Mintlify MCP server is enabled in Cursor Settings, you can use `checkout` → edit → `save` to open a PR from the editor. The server requires OAuth on first use.
+
+## Structure
+
+| Path | Purpose |
+|------|---------|
+| `docs.json` | Site config, navigation, API playground |
+| `openapi.yaml` | OpenAPI 3.0 spec for the API reference tab |
+| `index.mdx` | Landing page |
+| `getting-started/` | Auth and rate limits |
+| `guides/` | Querying, responses, standard endpoints |
+| `resources/` | Per-resource field and endpoint docs |
+| `concepts/` | Domain concepts layer |
+| `api-reference/` | API reference tab overview |
+| `images/logo/` | BuildingSwell logos |

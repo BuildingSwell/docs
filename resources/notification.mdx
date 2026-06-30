@@ -1,0 +1,22 @@
+---
+title: Notification
+description: Notifications and read-state endpoints.
+---
+
+Notifications. Standard read operations apply. See [standard endpoints](/guides/standard-endpoints).
+
+## Mark channel comments as read
+
+```http
+POST /notification/read-channel-comments
+
+{ "channelId": "<uuid>" }
+```
+
+## Mark deliverable documents as read
+
+```http
+POST /notification/read-deliverable-documents
+
+{ "deliverableId": "<uuid>" }
+```

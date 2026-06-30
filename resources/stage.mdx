@@ -1,0 +1,25 @@
+---
+title: Stage
+description: Stage Masters — reusable, department-scoped shop stations.
+---
+
+A **Stage Master** — a reusable, Department-scoped (`shopId`) shop station. Deliverable stage nodes reference one via `data.stageId` (see [Domain concepts](/concepts/overview)).
+
+**Search columns:** `name`
+
+Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+
+## Fields
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Auto-generated |
+| `organizationId` | UUID | From API key |
+| `name` | string | Required |
+| `shopId` | UUID | Required |
+| `description` | string \| null | |
+| `maxOrderCapacity` | integer | Required, non-negative |
+| `costCode` | string \| null | |
+| `isArchived` | boolean | Default `false` |
+| `createdAt` | date | Auto-generated |
+| `updatedAt` | date | Auto-generated |

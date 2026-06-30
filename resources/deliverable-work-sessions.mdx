@@ -1,0 +1,37 @@
+---
+title: Deliverable work sessions
+description: Work sessions on deliverables.
+---
+
+Work sessions on deliverables. Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+
+## Save assignments
+
+```http
+POST /deliverable/work-sessions/save
+
+{
+  "assignments": {
+    "<workerId>": ["<deliverableId1>", "<deliverableId2>"]
+  },
+  "shopId": "<uuid>",
+  "startDate": "2024-03-01T08:00:00.000Z",
+  "shouldStopEntireBatch": false
+}
+```
+
+`assignments` is keyed by **worker id**; each value is the array of deliverable ids that worker should be assigned to (at least one per worker). `shopId` is required; `startDate` defaults to now. The call diffs against each worker's currently open sessions — starting sessions for added deliverables and stopping them for removed ones (absent workers get a saved plan instead of an immediate session). Responds `204 No Content`.
+
+## Stop sessions
+
+```http
+POST /deliverable/work-sessions/stop
+
+{
+  "deliverableIds": ["<uuid>"],
+  "workerIds": ["<uuid>"],
+  "endDate": "2024-03-01T17:00:00.000Z"
+}
+```
+
+**At least one** of `deliverableIds` or `workerIds` is required (`endDate` is optional, defaults to now). A request with neither is rejected with a validation error — there is **no** "stop everything" shortcut. Responds `204 No Content`.

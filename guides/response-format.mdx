@@ -1,0 +1,36 @@
+---
+title: Response format
+description: Response shapes and error format for the BuildingSwell v2 API.
+---
+
+## Success responses
+
+| Operation | Shape |
+| --------- | ----- |
+| Get one | `{ "value": { ... } }` |
+| List | `{ "values": [...], "hasMore": boolean }` |
+| Create one | `{ "value": { ... } }` |
+| Create many | `{ "values": [...] }` |
+| Update | `{ "value": { ... } }` |
+| Count | `{ "count": number }` |
+| Group & count | `{ "values": [{ "groupId": any, "count": number }], "hasMore": boolean }` |
+
+## Errors
+
+```json
+{
+  "error": {
+    "message": "Description of what went wrong",
+    "missingPermissions": ["permission.name"]
+  }
+}
+```
+
+| Status | Meaning |
+| ------ | ------- |
+| `400` | Bad request |
+| `401` | Missing or invalid API key |
+| `403` | Insufficient permissions |
+| `404` | Not found |
+| `409` | Business logic conflict |
+| `500` | Server error |

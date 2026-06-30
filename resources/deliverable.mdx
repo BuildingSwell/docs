@@ -1,0 +1,213 @@
+---
+title: Deliverable
+description: The central work-tree resource — orders, routes, phases, stages, steps, and more.
+---
+
+Central, **generic** resource: one model implements nine domain **concepts** via its `type` field. The raw `deliverable` endpoints below are low-level and do **not** enforce concept rules (valid nesting, required fields, Stage→Master linkage). For concept-aware, validated work — and to learn how the concepts fit together — use the [Domain concepts](/concepts/overview) endpoints.
+
+Hierarchy in brief (see the concepts section for the full grammar): roots are `order`, `route`, `overhead`, `template-phase`; the containers `order`/`phase`/`component` nest freely and hold `stage` nodes; `step` and `qcstep` are leaves under a `stage`.
+
+**Import/Export:** ✓ — see [import and export](/guides/import-export)
+**Search columns:** `name`, `identifier`
+
+Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+
+## Fields
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Auto-generated |
+| `organizationId` | UUID | From API key |
+| `identifier` | string | Auto-generated |
+| `name` | string | Required |
+| `type` | string | See types below |
+| `quantity` | integer | Default `1` |
+| `parentId` | UUID \| null | Parent deliverable |
+| `rootParentId` | UUID \| null | Root of hierarchy |
+| `originTemplateId` | UUID \| null | Template it was created from |
+| `cycleTimeSec` | integer | Cycle time in seconds |
+| `durationSec` | integer | Duration in seconds |
+| `peopleNum` | integer | Default `1` |
+| `data` | object | Extensible key-value store |
+| `costCode` | string \| null | |
+| `schedule` | object \| null | See below |
+| `progress` | object \| null | See below |
+| `computed` | object | Read-only, see below |
+| `isArchived` | boolean | Default `false` |
+| `createdAt` | date | Auto-generated |
+| `updatedAt` | date | Auto-generated |
+
+## `type` values
+
+| Value | Role | Description |
+| ----- | ---- | ----------- |
+| `order` | root | Production ticket for a project. The **only** type with `schedule` + `progress`. |
+| `route` | root | Reusable process blueprint, applied onto orders/phases/components. |
+| `overhead` | root | Indirect-labour bucket (leaf); time is tracked via work sessions. |
+| `template-phase` | root | Reusable phase header, applied to a phase (mostly used inside routes). |
+| `phase` | container | Groups work under an order/route/phase/component; may link a route. |
+| `component` | container | Quantity-bearing sub-assembly; same nesting as a phase. |
+| `stage` | work node | A Department work-station. **Must** link a Stage Master via `data.stageId`. |
+| `step` | leaf | A unit of work; **must** be under a `stage`. |
+| `qcstep` | leaf | A QC gate; **must** be under a `stage`; needs `data.qcTemplateId`. |
+
+## `schedule` shape
+
+```json
+{
+  "startDate": "2024-03-01T00:00:00.000Z",
+  "endDate": "2024-03-15T00:00:00.000Z"
+}
+```
+
+## `progress` shape
+
+```json
+{
+  "status": "wip",
+  "completed": 10,
+  "wip": 5,
+  "percentage": 60,
+  "startedAt": "2024-03-01T08:00:00.000Z",
+  "completedAt": null,
+  "hasBeenReworked": false,
+  "updatedById": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "updatedAt": "2024-03-02T10:00:00.000Z"
+}
+```
+
+Status values: `waiting` | `todo` | `wip` | `rework` | `on-hold` | `done`
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `status` | string | Current progress status |
+| `completed` | number | Completed quantity |
+| `wip` | number | Work-in-progress quantity |
+| `percentage` | number | Completion percentage (0–100) |
+| `startedAt` | date \| null | When work first started |
+| `completedAt` | date \| null | When the deliverable reached `done` |
+| `hasBeenReworked` | boolean | `true` if the deliverable has ever been set to `rework` status. Immutable once set to `true`. |
+| `updatedById` | UUID \| null | ID of the user who last updated progress (auto-populated; `null` for `waiting` transitions) |
+| `updatedAt` | date \| null | Timestamp of the last progress update (auto-populated; `null` for `waiting` transitions) |
+
+<Note>
+  `hasBeenReworked`, `updatedById`, and `updatedAt` are server-managed — you do not need to supply them. `hasBeenReworked` is set automatically to `true` when a deliverable enters `rework` status and stays `true` even after the status subsequently changes.
+</Note>
+
+## `computed` shape (read-only)
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `rootType` | string \| null | `type` of the root deliverable in the hierarchy |
+| `fullName` | string[] | Name breadcrumb from root |
+| `fullPath` | string[] | ID breadcrumb from root |
+| `shopId` | UUID \| null | Resolved shop |
+| `phasesPath` | string[] | Phase names in ancestry |
+| `phase` | string \| null | Nearest phase name |
+| `currentChildren` | object[] | Direct children summary |
+| `containedStageIds` | UUID[] | All stage IDs anywhere under this node |
+| `containedPhaseNames` | string[] | All phase names anywhere under this node |
+| `currentStageIds` | UUID[] | Stage IDs on the node's current (active) work frontier; filter with `jinco` |
+| `currentPhaseNames` | string[] | Phase names on the current work frontier |
+| `combinedWorkerIds` | UUID[] | All worker IDs assigned anywhere under this node |
+| `combinedTagIds` | string[] | All tag IDs anywhere under this node |
+| `isLeaf` | boolean | `true` if no children |
+| `workerIds` | UUID[] | Workers directly assigned to this deliverable |
+| `tags` | string[] | Tags on this deliverable |
+| `projectId` | UUID \| null | Project this belongs to |
+| `date` | string \| null | Effective date |
+| `isAtRisk` | boolean | |
+| `isLate` | boolean | |
+| `effectiveDueDate` | string \| null | |
+| `effectiveDueDateIsInherited` | boolean | |
+| `effectiveDueDateIsLate` | boolean | |
+| `alertType` | `on-hold` \| `late` \| `at-risk` \| `no-risk` | Highest-priority alert state |
+| `alertTypeOrdinal` | integer | Numeric ordinal for `alertType` (0 = no-risk, 1 = at-risk, 2 = late, 3 = on-hold) |
+
+## Extra endpoints
+
+### Hierarchy
+
+Returns all deliverables in the subtree:
+
+```http
+GET /deliverable/:id/hierarchy
+```
+
+Response: `{ "values": Deliverable[], "totalCount": number }`
+
+### Groups
+
+Group deliverables by a semantic dimension:
+
+```http
+POST /deliverable/groups
+
+{ "groupBy": "project" }
+```
+
+`groupBy` values: `project` | `stage` | `people` | `root` | `tags`
+
+### Reorder
+
+Set dependency order under a root:
+
+```http
+POST /deliverable/reorder
+
+{
+  "rootParentId": "<uuid>",
+  "orderedDeliverableIds": ["<uuid1>", "<uuid2>"]
+}
+```
+
+Response: `204 No Content`
+
+### Crew time
+
+```http
+GET /deliverable/crew-time?deliverableId=<uuid>
+```
+
+Response: `{ "<deliverableId>": { ... } }`
+
+### Schedule a deliverable
+
+```http
+POST /deliverable/root/:rootId/schedule/:id
+
+{
+  "startDate": "2024-03-01T00:00:00.000Z",
+  "endDate": "2024-03-15T00:00:00.000Z"
+}
+```
+
+### Batch schedule
+
+```http
+POST /deliverable/schedule/batch
+
+[
+  {
+    "rootParentId": "<uuid>",
+    "targetId": "<uuid>",
+    "startDate": "2024-03-01T00:00:00.000Z",
+    "endDate": "2024-03-15T00:00:00.000Z"
+  }
+]
+```
+
+### Update progress
+
+```http
+POST /deliverable/root/:rootId/progress/:id
+
+{
+  "status": "wip",
+  "completed": 10,
+  "wip": 5,
+  "percentage": 60
+}
+```
+
+Response: `200` with the updated deliverable.

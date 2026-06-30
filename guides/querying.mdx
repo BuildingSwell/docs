@@ -1,0 +1,89 @@
+---
+title: Querying
+description: Pagination, sorting, field selection, search, filtering, and joins.
+---
+
+## Pagination
+
+```http
+GET /project?page=1&pageSize=50
+```
+
+- `page` — one-based; the first page is `1` (default `1`). `page=0` is invalid and returns an error.
+- `pageSize` — results per page (default `50`)
+- Response includes `hasMore: boolean`
+
+## Sorting
+
+```http
+GET /project?orderBy=name:asc
+GET /project?orderBy[]=name:asc&orderBy[]=createdAt:desc
+```
+
+## Select specific fields
+
+```http
+GET /project?select=id,name,identifier
+```
+
+## Full-text search
+
+```http
+GET /project?search=warehouse
+GET /project?search=warehouse:name,identifier
+```
+
+Append `:column1,column2` to limit search to specific columns.
+
+## Filtering
+
+Simple equality:
+
+```http
+GET /project?name=Warehouse A
+GET /deliverable?type=phase&type=route
+```
+
+Multiple values for the same field mean **IN**.
+
+With operators:
+
+```http
+GET /deliverable?createdAt:gt=2024-01-01
+GET /deliverable?progress.status:in=wip,rework
+```
+
+| Operator | Meaning |
+| -------- | ------- |
+| `:eq` | Equals |
+| `:ne` | Not equals |
+| `:gt` | Greater than |
+| `:ge` | Greater than or equal |
+| `:lt` | Less than |
+| `:le` | Less than or equal |
+| `:isn` | Is null |
+| `:isnn` | Is not null |
+| `:in` | In a list |
+
+Complex AND/OR:
+
+```http
+GET /deliverable?filter=type eq 'phase' and isArchived eq false
+GET /deliverable?filter=(type eq 'stage' or type eq 'step') and progress.status ne 'done'
+```
+
+## Joining related data
+
+```http
+GET /deliverable?join:project:id,name=projectId eq relation.id
+GET /deliverable?join:project as p:name=projectId eq p.id
+```
+
+Format: `?join:<table>:<fields>=<condition>`
+
+- **Multiple joins:** pass several `join:` params in one request to join several tables.
+- **Chained joins:** a condition may reference **another join's alias** (not only the base table), so you can hop across joined tables — e.g. join `deliverable as d`, then `deliverable as o` on `o.id eq d.rootParentId`. Declare a join **before** any join that references it. Conditions support JSONB paths (`d.data.stageId`) and id-fields are cast automatically. See the [timesheet](/resources/timesheet) attribution example.
+
+<Warning>
+  Joins to sensitive internal tables (e.g. `api_key`) are blocked.
+</Warning>
