@@ -29,7 +29,7 @@
   "api": {
     "openapi": "openapi.yaml",
     "mdx": {
-      "server": "https://{instance}/api/v2",
+      "server": "https://app.buildingswell.com/api/v2",
       "auth": {
         "method": "key",
         "name": "X-API-Key"

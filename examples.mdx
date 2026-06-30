@@ -6,21 +6,21 @@ description: Common API request examples for the BuildingSwell v2 API.
 ## List projects
 
 ```bash
-curl "https://<host>/api/v2/project?page=1&pageSize=20" \
+curl "https://app.buildingswell.com/api/v2/project?page=1&pageSize=20" \
   -H "X-API-Key: <key>"
 ```
 
 ## Filter deliverables by status
 
 ```bash
-curl "https://<host>/api/v2/deliverable?filter=progress.status eq 'wip' and type eq 'stage'" \
+curl "https://app.buildingswell.com/api/v2/deliverable?filter=progress.status eq 'wip' and type eq 'stage'" \
   -H "X-API-Key: <key>"
 ```
 
 ## Create a deliverable
 
 ```bash
-curl -X POST "https://<host>/api/v2/deliverable" \
+curl -X POST "https://app.buildingswell.com/api/v2/deliverable" \
   -H "X-API-Key: <key>" \
   -H "Content-Type: application/json" \
   -d '{ "type": "phase", "name": "Foundation", "quantity": 1 }'
@@ -29,7 +29,7 @@ curl -X POST "https://<host>/api/v2/deliverable" \
 ## Create multiple deliverables
 
 ```bash
-curl -X POST "https://<host>/api/v2/deliverable" \
+curl -X POST "https://app.buildingswell.com/api/v2/deliverable" \
   -H "X-API-Key: <key>" \
   -H "Content-Type: application/json" \
   -d '[{ "type": "phase", "name": "Foundation" }, { "type": "phase", "name": "Framing" }]'
@@ -38,7 +38,7 @@ curl -X POST "https://<host>/api/v2/deliverable" \
 ## Partial update
 
 ```bash
-curl -X PATCH "https://<host>/api/v2/project/<id>" \
+curl -X PATCH "https://app.buildingswell.com/api/v2/project/<id>" \
   -H "X-API-Key: <key>" \
   -H "Content-Type: application/json" \
   -d '{ "scheduledEndDate": "2024-12-31" }'
@@ -47,7 +47,7 @@ curl -X PATCH "https://<host>/api/v2/project/<id>" \
 ## Bulk update
 
 ```bash
-curl -X PATCH "https://<host>/api/v2/deliverable/bulk?type=step" \
+curl -X PATCH "https://app.buildingswell.com/api/v2/deliverable/bulk?type=step" \
   -H "X-API-Key: <key>" \
   -H "Content-Type: application/json" \
   -d '{ "costCode": "LABOR-001" }'
@@ -56,14 +56,14 @@ curl -X PATCH "https://<host>/api/v2/deliverable/bulk?type=step" \
 ## Count open deliverables
 
 ```bash
-curl "https://<host>/api/v2/deliverable/count?filter=progress.status ne 'done' and isArchived eq false" \
+curl "https://app.buildingswell.com/api/v2/deliverable/count?filter=progress.status ne 'done' and isArchived eq false" \
   -H "X-API-Key: <key>"
 ```
 
 ## Group by type
 
 ```bash
-curl -X POST "https://<host>/api/v2/deliverable/group-and-count" \
+curl -X POST "https://app.buildingswell.com/api/v2/deliverable/group-and-count" \
   -H "X-API-Key: <key>" \
   -H "Content-Type: application/json" \
   -d '{ "groupByField": "type" }'
@@ -72,14 +72,14 @@ curl -X POST "https://<host>/api/v2/deliverable/group-and-count" \
 ## Join project name onto deliverables
 
 ```bash
-curl "https://<host>/api/v2/deliverable?join:project:id,name=projectId%20eq%20relation.id&type=phase" \
+curl "https://app.buildingswell.com/api/v2/deliverable?join:project:id,name=projectId%20eq%20relation.id&type=phase" \
   -H "X-API-Key: <key>"
 ```
 
 ## Export to Excel
 
 ```bash
-curl "https://<host>/api/v2/deliverable/export?isArchived:eq=false" \
+curl "https://app.buildingswell.com/api/v2/deliverable/export?isArchived:eq=false" \
   -H "X-API-Key: <key>" \
   -o deliverables.xlsx
 ```
@@ -87,7 +87,7 @@ curl "https://<host>/api/v2/deliverable/export?isArchived:eq=false" \
 ## Import from Excel
 
 ```bash
-curl -X POST "https://<host>/api/v2/deliverable/import" \
+curl -X POST "https://app.buildingswell.com/api/v2/deliverable/import" \
   -H "X-API-Key: <key>" \
   -F "file=@deliverables.xlsx" \
   -F "timezone=America/New_York"
@@ -96,7 +96,7 @@ curl -X POST "https://<host>/api/v2/deliverable/import" \
 ## POST /query for large filters
 
 ```bash
-curl -X POST "https://<host>/api/v2/deliverable/query" \
+curl -X POST "https://app.buildingswell.com/api/v2/deliverable/query" \
   -H "X-API-Key: <key>" \
   -H "Content-Type: application/json" \
   -d '{ "filter": "type eq '\''phase'\'' and isArchived eq false", "page": 1, "pageSize": 100 }'
@@ -105,13 +105,13 @@ curl -X POST "https://<host>/api/v2/deliverable/query" \
 ## Learn the concept model (registry)
 
 ```bash
-curl "https://<host>/api/v2/concepts" -H "X-API-Key: <key>"
+curl "https://app.buildingswell.com/api/v2/concepts" -H "X-API-Key: <key>"
 ```
 
 ## Create a stage with concept validation
 
 ```bash
-curl -X POST "https://<host>/api/v2/concepts/deliverables" \
+curl -X POST "https://app.buildingswell.com/api/v2/concepts/deliverables" \
   -H "X-API-Key: <key>" -H "Content-Type: application/json" \
   -d '{ "type": "stage", "name": "Welding", "parentId": "<phaseId>", "data": { "shopId": "<departmentId>" } }'
 ```
@@ -119,7 +119,7 @@ curl -X POST "https://<host>/api/v2/concepts/deliverables" \
 ## Instantiate an order from a route
 
 ```bash
-curl -X POST "https://<host>/api/v2/concepts/orders/from-route" \
+curl -X POST "https://app.buildingswell.com/api/v2/concepts/orders/from-route" \
   -H "X-API-Key: <key>" -H "Content-Type: application/json" \
   -d '{ "routeId": "<routeId>", "projectId": "<projectId>", "name": "ORD for Customer X" }'
 ```
@@ -127,13 +127,13 @@ curl -X POST "https://<host>/api/v2/concepts/orders/from-route" \
 ## Read an order's concept context
 
 ```bash
-curl "https://<host>/api/v2/concepts/orders/<orderId>/context" -H "X-API-Key: <key>"
+curl "https://app.buildingswell.com/api/v2/concepts/orders/<orderId>/context" -H "X-API-Key: <key>"
 ```
 
 ## Preflight a destructive progress action (no write)
 
 ```bash
-curl -X POST "https://<host>/api/v2/concepts/root/<orderId>/progress/<nodeId>/plan" \
+curl -X POST "https://app.buildingswell.com/api/v2/concepts/root/<orderId>/progress/<nodeId>/plan" \
   -H "X-API-Key: <key>" -H "Content-Type: application/json" \
   -d '{ "type": "rework" }'
 ```

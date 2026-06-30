@@ -83,7 +83,7 @@ For `deliverable_work_session` rows, the time is logged against a stage/phase/co
 - declare the joins in dependency order — the join you reference (here `d`) must come **before** the joins that depend on it (`o`, `s`).
 
 ```bash
-curl "https://<host>/api/v2/timesheet?type=deliverable_work_session\
+curl "https://app.buildingswell.com/api/v2/timesheet?type=deliverable_work_session\
 &startDate:ge=2024-03-01&startDate:lt=2024-04-01\
 &join:deliverable%20as%20d:id,name,type,rootParentId,data,computed=deliverableId%20eq%20d.id\
 &join:deliverable%20as%20o:id,name,identifier=o.id%20eq%20d.rootParentId\

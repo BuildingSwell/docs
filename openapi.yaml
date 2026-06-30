@@ -9,12 +9,8 @@ info:
     See the [Guides](/index) for querying, filtering, joins, and response formats.
 
 servers:
-  - url: https://{instance}/api/v2
-    description: Your BuildingSwell instance
-    variables:
-      instance:
-        default: app.buildingswell.com
-        description: Your BuildingSwell host
+  - url: https://app.buildingswell.com/api/v2
+    description: BuildingSwell production
 
 security:
   - ApiKeyAuth: []
