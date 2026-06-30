@@ -1372,7 +1372,7 @@ paths:
     patch:
       tags: [Workers]
       summary: Update worker
-      description: Use `isArchived: true` to archive. Hard delete returns 403.
+      description: 'Use `isArchived: true` to archive. Hard delete returns 403.'
       parameters:
         - $ref: '#/components/parameters/id'
       requestBody:
