@@ -3,7 +3,7 @@ title: Deliverable
 description: The central work-tree resource — orders, routes, phases, stages, steps, and more.
 ---
 
-Central, **generic** resource: one model implements nine domain **concepts** via its `type` field. The raw `deliverable` endpoints below are low-level and do **not** enforce concept rules (valid nesting, required fields, Stage→Master linkage). For concept-aware, validated work — and to learn how the concepts fit together — use the [Domain concepts](/concepts/overview) endpoints.
+Central, **generic** resource: one model implements nine domain **concepts** via its `type` field. The raw `deliverable` endpoints below are low-level and do **not** enforce concept rules (valid nesting, required fields, stage linkage, Department scoping). For concept-aware, validated work — and to learn how the concepts fit together — use the [Domain concepts](/concepts/overview) endpoints.
 
 Hierarchy in brief (see the concepts section for the full grammar): roots are `order`, `route`, `overhead`, `template-phase`; the containers `order`/`phase`/`component` nest freely and hold `stage` nodes; `step` and `qcstep` are leaves under a `stage`.
 
@@ -47,7 +47,7 @@ Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
 | `template-phase` | root | Reusable phase header, applied to a phase (mostly used inside routes). |
 | `phase` | container | Groups work under an order/route/phase/component; may link a route. |
 | `component` | container | Quantity-bearing sub-assembly; same nesting as a phase. |
-| `stage` | work node | A Department work-station. **Must** link a Stage Master via `data.stageId`. |
+| `stage` | work node | A Department work-station. **Must** link a [stage](/resources/stage) via `data.stageId`. |
 | `step` | leaf | A unit of work; **must** be under a `stage`. |
 | `qcstep` | leaf | A QC gate; **must** be under a `stage`; needs `data.qcTemplateId`. |
 

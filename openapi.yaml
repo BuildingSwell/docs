@@ -9,8 +9,12 @@ info:
     See the [Guides](/index) for querying, filtering, joins, and response formats.
 
 servers:
-  - url: https://app.buildingswell.com/api/v2
-    description: BuildingSwell production
+  - url: https://{instance}/api/v2
+    description: Your BuildingSwell instance
+    variables:
+      instance:
+        default: app.buildingswell.com
+        description: Your BuildingSwell host
 
 security:
   - ApiKeyAuth: []
@@ -19,7 +23,7 @@ tags:
   - name: Projects
     description: Top-level project groupings
   - name: Stages
-    description: Stage Masters — reusable department-scoped shop stations
+    description: Stages — reusable department-scoped shop stations
   - name: Deliverables
     description: Work-tree nodes (orders, routes, phases, stages, steps, etc.)
   - name: Work sessions
@@ -243,21 +247,21 @@ paths:
   /stage:
     get:
       tags: [Stages]
-      summary: List stage masters
+      summary: List stages
       parameters:
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/pageSize'
         - $ref: '#/components/parameters/filter'
       responses:
         '200':
-          description: List of stage masters
+          description: List of stages
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListResponse'
     post:
       tags: [Stages]
-      summary: Create stage master(s)
+      summary: Create stage(s)
       requestBody:
         required: true
         content:
@@ -282,7 +286,7 @@ paths:
                   nullable: true
       responses:
         '200':
-          description: Created stage master(s)
+          description: Created stage(s)
           content:
             application/json:
               schema:
@@ -291,19 +295,19 @@ paths:
   /stage/{id}:
     get:
       tags: [Stages]
-      summary: Get stage master
+      summary: Get stage
       parameters:
         - $ref: '#/components/parameters/id'
       responses:
         '200':
-          description: Stage master
+          description: Stage record
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SingleResponse'
     patch:
       tags: [Stages]
-      summary: Update stage master
+      summary: Update stage
       parameters:
         - $ref: '#/components/parameters/id'
       requestBody:
@@ -314,14 +318,14 @@ paths:
               type: object
       responses:
         '200':
-          description: Updated stage master
+          description: Updated stage
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SingleResponse'
     put:
       tags: [Stages]
-      summary: Upsert stage master
+      summary: Upsert stage
       parameters:
         - $ref: '#/components/parameters/id'
       requestBody:
@@ -332,10 +336,10 @@ paths:
               type: object
       responses:
         '200':
-          description: Upserted stage master
+          description: Upserted stage
     delete:
       tags: [Stages]
-      summary: Delete stage master
+      summary: Delete stage
       parameters:
         - $ref: '#/components/parameters/id'
       responses:
@@ -345,7 +349,7 @@ paths:
   /stage/query:
     post:
       tags: [Stages]
-      summary: Query stage masters
+      summary: Query stages
       requestBody:
         content:
           application/json:
@@ -353,7 +357,7 @@ paths:
               $ref: '#/components/schemas/QueryBody'
       responses:
         '200':
-          description: List of stage masters
+          description: List of stages
           content:
             application/json:
               schema:
@@ -362,7 +366,7 @@ paths:
   /stage/group-and-count:
     post:
       tags: [Stages]
-      summary: Group and count stage masters
+      summary: Group and count stages
       requestBody:
         required: true
         content:
@@ -1727,7 +1731,7 @@ paths:
   /concepts/stage-masters:
     get:
       tags: [Concepts]
-      summary: List stage masters
+      summary: List stages
       parameters:
         - name: departmentId
           in: query
@@ -1736,7 +1740,7 @@ paths:
             format: uuid
       responses:
         '200':
-          description: Stage masters
+          description: Stages
           content:
             application/json:
               schema:

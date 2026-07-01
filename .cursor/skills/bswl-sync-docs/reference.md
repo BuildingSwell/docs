@@ -159,7 +159,7 @@ When the extract script flags these, do not add them unless product asks to docu
 
 ## OpenAPI conventions in this repo
 
-- Server: `https://app.buildingswell.com/api/v2`
+- Server: `https://{instance}/api/v2` — defaults to `app.buildingswell.com` in the API playground (editable)
 - Auth: `X-API-Key` header (`ApiKeyAuth` security scheme)
 - Path params: `{id}`, `{rootId}` (OpenAPI style, not Express `:id`)
 - List endpoints use shared `components/parameters` refs

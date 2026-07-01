@@ -77,7 +77,7 @@ For each new endpoint:
 2. Add path + method under `paths:` following existing patterns in `openapi.yaml`.
 3. Reuse shared parameters (`page`, `pageSize`, `filter`, …) and response schemas (`ListResponse`, `SingleResponse`, …).
 4. **Quote YAML descriptions** that contain colons (e.g. `` 'Use `isArchived: true` to archive.' ``).
-5. Use `app.buildingswell.com` as the server URL — not `<your-instance>`.
+5. Use `app.buildingswell.com` as the default instance in OpenAPI `servers` variables — keep `{instance}` editable in the playground.
 
 Factory-backed resources share CRUD shapes — copy from a sibling resource (e.g. `project`) and rename schemas.
 

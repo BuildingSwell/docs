@@ -26,7 +26,7 @@ Unified view of all time-tracking records. Aggregates attendance check-ins and d
 | `lastUpdatedBy` | UUID \| null | User who last modified |
 | `buildOrderId` | UUID \| null | Order id; populated **only** for `build_order_work_session` records |
 | `overheadId` | UUID \| null | Populated **only** for `overhead_work_session` records |
-| `stageId` | UUID \| null | **Stage Master** id; populated **only** for `build_order_work_session` records |
+| `stageId` | UUID \| null | **Stage** id; populated **only** for `build_order_work_session` records |
 | `deliverableId` | UUID \| null | Populated **only** for `deliverable_work_session` records |
 | `shiftWorkHours` | object \| null | Shift schedule (see below) |
 | `externalSource` | string \| null | Source system, e.g. `"quickbase"` |
@@ -94,18 +94,18 @@ curl "https://app.buildingswell.com/api/v2/timesheet?type=deliverable_work_sessi
 Each row comes back with:
 
 - `o.name`, `o.identifier` → the **Order** (joined via the node's `rootParentId`)
-- `s.name` → the **Stage Master** (joined via the node's `data.stageId`)
+- `s.name` → the **stage** (joined via the node's `data.stageId`)
 - `d.computed.phase` → the **Phase name** (read straight off the joined node)
 
 <Note>
-  The `s` join matches `stage.id` against `data->>'stageId'`; the engine casts both sides to `uuid` automatically. Phase/component nodes won't have a Stage Master, so `s` is `null` for those rows — read `computed.phase` for the phase regardless.
+  The `s` join matches `stage.id` against `data->>'stageId'`; the engine casts both sides to `uuid` automatically. Phase/component nodes won't have a linked stage, so `s` is `null` for those rows — read `computed.phase` for the phase regardless.
 </Note>
 
 <Tip>
   **Alternative (no chaining):** join only the deliverable node, read `d.computed.phase` directly, collect the distinct `d.rootParentId` / `d.data.stageId` values, and resolve their names with bulk `POST /deliverable/query` and `POST /stage/query` calls. Same result, more round-trips.
 </Tip>
 
-For `build_order_work_session` rows (order-level time), there is no deliverable node — join the Order and Stage Master directly off the timesheet's own keys:
+For `build_order_work_session` rows (order-level time), there is no deliverable node — join the order and stage directly off the timesheet's own keys:
 
 ```http
 ?join:deliverable as o:id,name,identifier=buildOrderId eq o.id&join:stage:id,name=stageId eq stage.id

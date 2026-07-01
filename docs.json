@@ -22,14 +22,14 @@
       },
       {
         "label": "Support",
-        "href": "https://www.buildingswell.com/support"
+        "href": "https://help.buildingswell.com/"
       }
     ]
   },
   "api": {
     "openapi": "openapi.yaml",
     "mdx": {
-      "server": "https://app.buildingswell.com/api/v2",
+      "server": "https://{instance}/api/v2",
       "auth": {
         "method": "key",
         "name": "X-API-Key"
