@@ -458,6 +458,22 @@ paths:
         '204':
           description: Deleted
 
+  /deliverable/bulk:
+    put:
+      tags: [Deliverables]
+      summary: Bulk upsert deliverables
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+      responses:
+        '200':
+          description: Upserted records
+
   /deliverable/query:
     post:
       tags: [Deliverables]

@@ -154,6 +154,7 @@
               "POST /deliverable",
               "PATCH /deliverable/{id}",
               "PUT /deliverable/{id}",
+              "PUT /deliverable/bulk",
               "DELETE /deliverable/{id}",
               "POST /deliverable/query",
               "POST /deliverable/group-and-count",
