@@ -24,9 +24,9 @@ Unified view of all time-tracking records. Aggregates attendance check-ins and d
 | `shopId` | UUID | Shop the session belongs to |
 | `isEdited` | boolean | Whether manually edited |
 | `lastUpdatedBy` | UUID \| null | User who last modified |
-| `buildOrderId` | UUID \| null | Order id; populated **only** for `build_order_work_session` records |
-| `overheadId` | UUID \| null | Populated **only** for `overhead_work_session` records |
-| `stageId` | UUID \| null | **Stage** id; populated **only** for `build_order_work_session` records |
+| `buildOrderId` | UUID \| null | Always `null` — retained in the schema but no longer populated by any row type |
+| `overheadId` | UUID \| null | Always `null` — retained in the schema but no longer populated by any row type |
+| `stageId` | UUID \| null | Always `null` — retained in the schema but no longer populated by any row type |
 | `deliverableId` | UUID \| null | Populated **only** for `deliverable_work_session` records |
 | `shiftWorkHours` | object \| null | Shift schedule (see below) |
 | `externalSource` | string \| null | Source system, e.g. `"quickbase"` |
@@ -37,14 +37,16 @@ Unified view of all time-tracking records. Aggregates attendance check-ins and d
 
 ## `type` values
 
+Only two row types exist today:
+
 | Value | Description | Populated FK |
 | ----- | ----------- | ------------ |
 | `attendance` | Attendance check-in/out record | _(none)_ |
 | `deliverable_work_session` | Time logged against a specific deliverable node | `deliverableId` |
-| `build_order_work_session` | Time logged at the order level | `buildOrderId`, `stageId` |
-| `overhead_work_session` | Time logged against an overhead bucket | `overheadId` |
 
-Each row type populates a different foreign key (the others are `null`) — see the "Populated FK" column. This matters when joining: a `deliverable_work_session` links to the build tree **only** through `deliverableId`, while a `build_order_work_session` links through `buildOrderId`/`stageId`.
+<Note>
+  `build_order_work_session` and `overhead_work_session` row types (and the `buildOrderId` / `overheadId` / `stageId` foreign keys they used) have been removed server-side. `buildOrderId`, `overheadId`, and `stageId` remain in the response shape for backward compatibility but are always `null`. Order/stage/phase attribution for `deliverable_work_session` rows now goes exclusively through `deliverableId` — see the join example below.
+</Note>
 
 ## `shiftWorkHours` shape
 
@@ -77,7 +79,7 @@ GET /timesheet?type=deliverable_work_session&externalSync:ne=synced
 
 ## Loading hours with Order / Stage / Phase attribution
 
-For `deliverable_work_session` rows, the time is logged against a stage/phase/component node, and the **only** link to the build tree is `deliverableId` (`buildOrderId` and `stageId` are `null` for these rows). To attribute each row to its Order, Stage and Phase, join the deliverable node and then **chain** further joins off it:
+For `deliverable_work_session` rows, the time is logged against a stage/phase/component node, and the **only** link to the build tree is `deliverableId` (`buildOrderId` and `stageId` are always `null`). To attribute each row to its Order, Stage and Phase, join the deliverable node and then **chain** further joins off it:
 
 - a join's condition may reference **another join's alias** (not just the base table), so you can hop `timesheet → deliverable → order` in a single request;
 - declare the joins in dependency order — the join you reference (here `d`) must come **before** the joins that depend on it (`o`, `s`).
@@ -105,8 +107,4 @@ Each row comes back with:
   **Alternative (no chaining):** join only the deliverable node, read `d.computed.phase` directly, collect the distinct `d.rootParentId` / `d.data.stageId` values, and resolve their names with bulk `POST /deliverable/query` and `POST /stage/query` calls. Same result, more round-trips.
 </Tip>
 
-For `build_order_work_session` rows (order-level time), there is no deliverable node — join the order and stage directly off the timesheet's own keys:
-
-```http
-?join:deliverable as o:id,name,identifier=buildOrderId eq o.id&join:stage:id,name=stageId eq stage.id
-```
+`attendance` rows have no build-tree attribution — `deliverableId`, `buildOrderId`, `overheadId`, and `stageId` are all `null` for them.

@@ -45,7 +45,7 @@ tags:
   - name: Timesheets
     description: Unified time-tracking records (read-only)
   - name: Organization
-    description: Roles, members, and API keys
+    description: Roles and organization members
   - name: Concepts
     description: Concept-aware deliverable endpoints with validation
 
@@ -129,6 +129,7 @@ paths:
       summary: Upsert project
       parameters:
         - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -202,6 +203,12 @@ paths:
     patch:
       tags: [Projects]
       summary: Bulk update projects
+      description: >-
+        The filter must be supplied as **query-string** parameters (e.g.
+        '?isArchived=false'); a filter in the request body alone is ignored
+        and the request 400s with "No filter provided for updateMany".
+      parameters:
+        - $ref: '#/components/parameters/filter'
       requestBody:
         required: true
         content:
@@ -214,6 +221,8 @@ paths:
     put:
       tags: [Projects]
       summary: Bulk upsert projects
+      parameters:
+        - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -328,6 +337,7 @@ paths:
       summary: Upsert stage
       parameters:
         - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -444,6 +454,7 @@ paths:
       summary: Upsert deliverable
       parameters:
         - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -466,6 +477,8 @@ paths:
     put:
       tags: [Deliverables]
       summary: Bulk upsert deliverables
+      parameters:
+        - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -589,6 +602,10 @@ paths:
     post:
       tags: [Deliverables]
       summary: Schedule a deliverable
+      description: >-
+        Body is an action union (see 'ScheduleAction'); 'newStart'/'newFinish'
+        are epoch **seconds**, not ISO date strings. Only one of the two is
+        required per action — the engine derives the other.
       parameters:
         - name: rootId
           in: path
@@ -607,22 +624,18 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                startDate:
-                  type: string
-                  format: date-time
-                endDate:
-                  type: string
-                  format: date-time
+              $ref: '#/components/schemas/ScheduleAction'
       responses:
-        '200':
-          description: Scheduled deliverable
+        '204':
+          description: Scheduled — re-fetch the deliverable to see the new `schedule`
 
   /deliverable/schedule/batch:
     post:
       tags: [Deliverables]
       summary: Batch schedule deliverables
+      description: >-
+        Each item wraps a 'ScheduleAction' (see 'POST
+        /deliverable/root/{rootId}/schedule/{id}') with the target ids.
       requestBody:
         required: true
         content:
@@ -631,7 +644,7 @@ paths:
               type: array
               items:
                 type: object
-                required: [rootParentId, targetId, startDate, endDate]
+                required: [rootParentId, targetId, action]
                 properties:
                   rootParentId:
                     type: string
@@ -639,20 +652,20 @@ paths:
                   targetId:
                     type: string
                     format: uuid
-                  startDate:
-                    type: string
-                    format: date-time
-                  endDate:
-                    type: string
-                    format: date-time
+                  action:
+                    $ref: '#/components/schemas/ScheduleAction'
       responses:
-        '200':
+        '204':
           description: Batch scheduled
 
   /deliverable/root/{rootId}/progress/{id}:
     post:
       tags: [Deliverables]
       summary: Update deliverable progress
+      description: >-
+        Body is an action union (see 'ProgressAction'), not
+        '{status, completed, wip}'. Response is '{ kickedWorkers }' — not the
+        updated deliverable; re-fetch it separately if needed.
       parameters:
         - name: rootId
           in: path
@@ -671,20 +684,22 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                status:
-                  type: string
-                  enum: [waiting, todo, wip, rework, on-hold, done]
-                completed:
-                  type: number
-                wip:
-                  type: number
-                percentage:
-                  type: number
+              $ref: '#/components/schemas/ProgressAction'
       responses:
         '200':
-          description: Updated deliverable
+          description: >-
+            Progress updated. Returns the ids of workers whose active work
+            sessions/plans were stopped as a side effect — not the deliverable.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  kickedWorkers:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
 
   /deliverable/export:
     get:
@@ -728,20 +743,16 @@ paths:
                   example: America/New_York
       responses:
         '200':
-          description: Import result
+          description: >-
+            Import result. Row-level and file-structure errors (missing
+            columns, circular parent references, unresolved identifiers, etc.)
+            are returned here with '200' rather than failing the request.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  errors:
-                    type: array
-                    items:
-                      type: object
-                  data:
-                    type: object
+                $ref: '#/components/schemas/ImportResult'
+        '500':
+          description: The uploaded file could not be parsed (corrupt or empty workbook).
 
   /comment:
     get:
@@ -799,6 +810,7 @@ paths:
       summary: Upsert comment
       parameters:
         - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -896,6 +908,7 @@ paths:
       summary: Upsert document
       parameters:
         - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -979,6 +992,7 @@ paths:
       summary: Upsert note
       parameters:
         - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -1014,7 +1028,10 @@ paths:
                   type: string
                   format: uuid
                 content:
-                  type: string
+                  type: object
+                  description: >-
+                    Rich-text document (JSON object). A plain string is
+                    rejected with 400.
       responses:
         '200':
           description: Note created or updated
@@ -1139,6 +1156,10 @@ paths:
     get:
       tags: [QC]
       summary: List QC templates
+      description: >-
+        Read and delete only — 'POST /qc-template' and 'PATCH
+        /qc-template/{id}' are not supported (create fails server-side;
+        update is a silent no-op). Manage QC templates via the BuildingSwell UI.
       parameters:
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/pageSize'
@@ -1146,18 +1167,6 @@ paths:
       responses:
         '200':
           description: List of QC templates
-    post:
-      tags: [QC]
-      summary: Create QC template(s)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Created QC template(s)
 
   /qc-template/{id}:
     get:
@@ -1168,20 +1177,6 @@ paths:
       responses:
         '200':
           description: QC template record
-    patch:
-      tags: [QC]
-      summary: Update QC template
-      parameters:
-        - $ref: '#/components/parameters/id'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Updated QC template
     delete:
       tags: [QC]
       summary: Delete QC template
@@ -1616,75 +1611,6 @@ paths:
         '204':
           description: Invite resent
 
-  /api-key:
-    get:
-      tags: [Organization]
-      summary: List API keys
-      description: Requires admin access.
-      responses:
-        '200':
-          description: List of API keys
-    post:
-      tags: [Organization]
-      summary: Create API key
-      description: The `secretKey` is returned exactly once and cannot be retrieved again.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name]
-              properties:
-                name:
-                  type: string
-                permissions:
-                  type: array
-                  items:
-                    type: string
-                permissionsV2:
-                  type: array
-                  items:
-                    type: object
-      responses:
-        '200':
-          description: Created API key (includes secretKey)
-
-  /api-key/{id}:
-    patch:
-      tags: [Organization]
-      summary: Update API key
-      parameters:
-        - $ref: '#/components/parameters/id'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                permissions:
-                  type: array
-                  items:
-                    type: string
-                permissionsV2:
-                  type: array
-                  items:
-                    type: object
-      responses:
-        '200':
-          description: Updated API key
-    delete:
-      tags: [Organization]
-      summary: Delete API key
-      parameters:
-        - $ref: '#/components/parameters/id'
-      responses:
-        '204':
-          description: Deleted
-
   /concepts:
     get:
       tags: [Concepts]
@@ -1976,9 +1902,18 @@ components:
     select:
       name: select
       in: query
+      description: >-
+        Fields to include in the response. Repeat the parameter per field
+        (e.g. '?select=id&select=name') — a single comma-separated value is
+        not supported and is silently ignored. For POST /query, pass 'select'
+        as a JSON array in the body instead.
+      style: form
+      explode: true
       schema:
-        type: string
-        example: id,name,identifier
+        type: array
+        items:
+          type: string
+        example: [id, name, identifier]
     search:
       name: search
       in: query
@@ -1989,6 +1924,22 @@ components:
       in: query
       schema:
         type: string
+    update:
+      name: update
+      in: query
+      required: true
+      description: >-
+        Required on upsert. Columns to overwrite when a row with a
+        conflicting unique key already exists. Repeat the parameter per
+        column (e.g. '?update=name&update=costCode') — a single
+        comma-separated value is treated as one (invalid) column name.
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+        example: [identifier, name]
 
   schemas:
     Error:
@@ -2147,6 +2098,131 @@ components:
           nullable: true
         data:
           type: object
+
+    ScheduleAction:
+      description: >-
+        Discriminated union keyed on 'type'. 'newStart'/'newFinish' are epoch
+        seconds. Only one of 'newStart'/'newFinish' needs to be supplied for
+        'schedule', 'drag', 'shrink', and 'expand' — the engine derives the
+        other from duration/dependencies.
+      oneOf:
+        - type: object
+          required: [type, newStart]
+          properties:
+            type:
+              type: string
+              enum: [schedule]
+            newStart:
+              type: integer
+              description: Epoch seconds
+        - type: object
+          required: [type, newFinish]
+          properties:
+            type:
+              type: string
+              enum: [schedule]
+            newFinish:
+              type: integer
+              description: Epoch seconds
+        - type: object
+          required: [type]
+          properties:
+            type:
+              type: string
+              enum: [drag]
+            newStart:
+              type: integer
+              description: Epoch seconds
+            newFinish:
+              type: integer
+              description: Epoch seconds
+        - type: object
+          required: [type, newDuration]
+          properties:
+            type:
+              type: string
+              enum: [shrink, expand]
+            newDuration:
+              type: integer
+              description: Seconds
+            newStart:
+              type: integer
+              description: Epoch seconds
+            newFinish:
+              type: integer
+              description: Epoch seconds
+        - type: object
+          required: [type]
+          properties:
+            type:
+              type: string
+              enum: [reschedule]
+      discriminator:
+        propertyName: type
+
+    ProgressAction:
+      description: Discriminated union keyed on 'type'.
+      oneOf:
+        - type: object
+          required: [type]
+          properties:
+            type:
+              type: string
+              enum: [complete, rework, put-on-hold, resume-work]
+        - type: object
+          required: [type, quantity]
+          properties:
+            type:
+              type: string
+              enum: [uncomplete, send-ahead]
+            quantity:
+              type: number
+        - type: object
+          required: [type, percentage]
+          properties:
+            type:
+              type: string
+              enum: [set-percentage]
+            percentage:
+              type: number
+              minimum: 0
+              maximum: 100
+              description: Not allowed on qcstep nodes.
+      discriminator:
+        propertyName: type
+
+    ImportResult:
+      type: object
+      properties:
+        imported:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+                description: 1-based data row; 0 = file-level error
+              column:
+                type: string
+              value: {}
+              kind:
+                type: string
+                enum: [structure, validation, resolution, parse, server]
+              message:
+                type: string
+        warnings:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+              column:
+                type: string
+              message:
+                type: string
 
   responses:
     BadRequest:

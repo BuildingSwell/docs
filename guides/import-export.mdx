@@ -24,11 +24,29 @@ file=<xlsx file>           # required
 timezone=America/New_York  # optional
 ```
 
-Only `.xlsx`, max 10 MB. Always returns `200` — check the body for row-level errors:
+Only `.xlsx`, max 10 MB. Row-level and file-structure problems (missing required columns, a circular parent reference, an unresolved parent identifier, etc.) are returned as `200` with details in the body — they do **not** fail the HTTP request:
 
 ```json
-{ "success": true, "errors": [], "data": { ... } }
+{ "imported": 3, "errors": [], "warnings": [] }
 ```
+
+```json
+{
+  "imported": 0,
+  "errors": [
+    {
+      "row": 2,
+      "column": "Parent ID",
+      "value": "PRJ-9",
+      "kind": "resolution",
+      "message": "Parent \"PRJ-9\" was not found in the database and is not present in this import file"
+    }
+  ],
+  "warnings": []
+}
+```
+
+`row: 0` means the error applies to the whole file rather than a specific row (e.g. a missing required column). A genuinely unreadable file (corrupt `.xlsx`, or a workbook with no sheets) is the one case that does **not** come back as `200` — it throws and surfaces as a `500`.
 
 <Warning>
   Import endpoints are rate-limited to 100 requests/min.

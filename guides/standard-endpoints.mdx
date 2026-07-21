@@ -11,17 +11,46 @@ Every resource supports these endpoints (example uses `/project`):
 | `GET` | `/project/:id` | Get a single record |
 | `POST` | `/project` | Create one or many records |
 | `PATCH` | `/project/:id` | Partially update a record |
-| `PUT` | `/project/:id` | Upsert a record |
+| `PUT` | `/project/:id?update=<columns>` | Upsert a record |
 | `DELETE` | `/project/:id` | Delete a record |
 | `GET` | `/project/count` | Count matching records |
 | `POST` | `/project/count` | Count (use when filter is large) |
 | `POST` | `/project/query` | List (use when filter is large) |
-| `PATCH` | `/project/bulk` | Update many records at once |
-| `PUT` | `/project/bulk` | Upsert many records |
+| `PATCH` | `/project/bulk?<filter>` | Update many records at once |
+| `PUT` | `/project/bulk?update=<columns>` | Upsert many records |
 | `POST` | `/project/group-and-count` | Group by a field and count |
 
 <Note>
   Bulk delete is not available on any resource.
 </Note>
+
+### Upsert requires `?update=`
+
+Both `PUT /:id` and `PUT /bulk` require an `update` query parameter listing which columns to overwrite when a row with a conflicting unique key already exists. Without it, the request is rejected with `400`. Pass it as a repeated query parameter (not comma-separated):
+
+```http
+PUT /project/<id>?update=name&update=costCode
+Content-Type: application/json
+
+{ "name": "Warehouse A", "costCode": "WH-A" }
+```
+
+```http
+PUT /project/bulk?update=identifier&update=name
+Content-Type: application/json
+
+[{ "identifier": "PRJ-1", "name": "Warehouse A" }]
+```
+
+### Bulk update needs a filter in the query string
+
+`PATCH /bulk` requires a filter as **query-string** parameters — a filter in the request body alone is ignored, and the request 400s with `"No filter provided for updateMany"`:
+
+```http
+PATCH /project/bulk?isArchived=false
+Content-Type: application/json
+
+{ "costCode": "WH-A" }
+```
 
 Some resources restrict which operations are available (for example, `timesheet` is read-only and `worker` rejects hard deletes). See each [resource page](/resources/project) for details.

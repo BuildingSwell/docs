@@ -89,8 +89,7 @@
               "resources/timesheet",
               "resources/worker",
               "resources/role",
-              "resources/organization-member",
-              "resources/api-key"
+              "resources/organization-member"
             ]
           },
           {
@@ -252,13 +251,11 @@
               "DELETE /qc-inspection-set/{id}",
               "GET /qc-template",
               "GET /qc-template/{id}",
-              "POST /qc-template",
-              "PATCH /qc-template/{id}",
               "DELETE /qc-template/{id}"
             ]
           },
           {
-            "group": "Workers",
+            "group": "People (Workers)",
             "openapi": "openapi.yaml",
             "pages": [
               "GET /worker",
@@ -291,11 +288,7 @@
               "PATCH /organization-member/{id}",
               "PATCH /organization-member/{id}/deactivate",
               "PATCH /organization-member/{id}/reactivate",
-              "POST /organization-member/{id}/invite/resend",
-              "GET /api-key",
-              "POST /api-key",
-              "PATCH /api-key/{id}",
-              "DELETE /api-key/{id}"
+              "POST /organization-member/{id}/invite/resend"
             ]
           },
           {
