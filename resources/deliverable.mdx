@@ -60,6 +60,10 @@ Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
 }
 ```
 
+<Note>
+  This is the shape stored on the record and returned by `GET`. You don't write it directly — it's an effect of the [schedule action endpoints](#schedule-a-deliverable) below, whose request bodies use a different shape (an action union with epoch-second times, not `startDate`/`endDate`).
+</Note>
+
 ## `progress` shape
 
 ```json
@@ -173,16 +177,32 @@ Response: `{ "<deliverableId>": { ... } }`
 
 ### Schedule a deliverable
 
+The body is an **action union** (`type` discriminates the shape), not `{startDate, endDate}`. Times are epoch **seconds** (`newStart` / `newFinish`), not ISO strings — only one of the two is required per call, the engine derives the other from duration/dependencies.
+
 ```http
 POST /deliverable/root/:rootId/schedule/:id
-
-{
-  "startDate": "2024-03-01T00:00:00.000Z",
-  "endDate": "2024-03-15T00:00:00.000Z"
-}
 ```
 
+```json
+// type: "schedule" — initial placement
+{ "type": "schedule", "newStart": 1709251200 }
+
+// type: "drag" — move without changing duration
+{ "type": "drag", "newFinish": 1710460800 }
+
+// type: "shrink" / "expand" — change duration, anchored at start or finish
+{ "type": "shrink", "newDuration": 604800, "newStart": 1709251200 }
+{ "type": "expand", "newDuration": 1814400, "newFinish": 1710460800 }
+
+// type: "reschedule" — recompute from dependencies, no extra fields
+{ "type": "reschedule" }
+```
+
+Response: `204 No Content` — re-fetch the deliverable (`GET /deliverable/:id`) to see the resulting `schedule`.
+
 ### Batch schedule
+
+Same action union as above, wrapped with `rootParentId`/`targetId` per item:
 
 ```http
 POST /deliverable/schedule/batch
@@ -191,23 +211,40 @@ POST /deliverable/schedule/batch
   {
     "rootParentId": "<uuid>",
     "targetId": "<uuid>",
-    "startDate": "2024-03-01T00:00:00.000Z",
-    "endDate": "2024-03-15T00:00:00.000Z"
+    "action": { "type": "drag", "newStart": 1709251200 }
   }
 ]
 ```
 
+Response: `204 No Content`.
+
 ### Update progress
+
+The body is an **action union** (`type` discriminates the shape), not `{status, completed, wip}`:
 
 ```http
 POST /deliverable/root/:rootId/progress/:id
-
-{
-  "status": "wip",
-  "completed": 10,
-  "wip": 5,
-  "percentage": 60
-}
 ```
 
-Response: `200` with the updated deliverable.
+```json
+// type: "complete" — no extra fields
+{ "type": "complete" }
+
+// type: "uncomplete" — revert a completed quantity back to wip
+{ "type": "uncomplete", "quantity": 5 }
+
+// type: "send-ahead" — partially complete ahead of dependencies
+{ "type": "send-ahead", "quantity": 3 }
+
+// type: "rework" — no extra fields
+{ "type": "rework" }
+
+// type: "put-on-hold" / "resume-work" — no extra fields
+{ "type": "put-on-hold" }
+{ "type": "resume-work" }
+
+// type: "set-percentage" — not allowed on qcstep nodes
+{ "type": "set-percentage", "percentage": 60 }
+```
+
+Response: `200` with `{ "kickedWorkers": [...] }` — the IDs of any workers whose in-progress work sessions/plans were stopped because their deliverable reached `done`. It does **not** return the updated deliverable; re-fetch it separately if you need the new `progress`.

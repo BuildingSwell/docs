@@ -3,4 +3,10 @@ title: QC template
 description: QC template versions.
 ---
 
-QC template versions. Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+QC template versions.
+
+<Warning>
+  **Read and delete only.** `POST /` and `PATCH /:id` are not usable: `POST /` always fails server-side, and `PATCH /:id` silently accepts the request but writes nothing. Manage QC templates through the BuildingSwell UI; use this resource to read and delete existing versions.
+</Warning>
+
+Only `GET /`, `GET /:id`, `GET /count`, `POST /count`, `POST /query`, `POST /group-and-count`, and `DELETE /:id` are supported. See [standard endpoints](/guides/standard-endpoints).

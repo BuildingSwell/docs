@@ -5,6 +5,17 @@ description: Notes on deliverables.
 
 Notes on deliverables. Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
 
+## Fields
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Auto-generated |
+| `organizationId` | UUID | From API key |
+| `deliverableId` | UUID | The deliverable this note belongs to |
+| `content` | object | Rich-text document (JSON object). **Must** be an object — a plain string is rejected with `400` |
+| `createdAt` | date | Auto-generated |
+| `updatedAt` | date | Auto-generated |
+
 ## Create or update by deliverable
 
 Creates if missing, updates if it exists:
@@ -14,6 +25,6 @@ PUT /note/by-deliverable
 
 {
   "deliverableId": "<uuid>",
-  "content": "..."
+  "content": { "type": "doc", "content": [] }
 }
 ```

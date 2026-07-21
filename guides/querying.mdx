@@ -22,8 +22,16 @@ GET /project?orderBy[]=name:asc&orderBy[]=createdAt:desc
 
 ## Select specific fields
 
+A comma-separated value in a single `select` parameter is **not** supported and is silently ignored. Repeat the parameter instead:
+
 ```http
-GET /project?select=id,name,identifier
+GET /project?select=id&select=name&select=identifier
+```
+
+Or, for `POST /project/query`, pass `select` as a JSON array in the body:
+
+```json
+{ "select": ["id", "name", "identifier"] }
 ```
 
 ## Full-text search
@@ -50,7 +58,6 @@ With operators:
 
 ```http
 GET /deliverable?createdAt:gt=2024-01-01
-GET /deliverable?progress.status:in=wip,rework
 ```
 
 | Operator | Meaning |
@@ -63,7 +70,10 @@ GET /deliverable?progress.status:in=wip,rework
 | `:le` | Less than or equal |
 | `:isn` | Is null |
 | `:isnn` | Is not null |
-| `:in` | In a list |
+
+<Warning>
+  There is no `:in` operator — a filter like `progress.status:in=wip,rework` is accepted by the query parser but fails at the database layer (`500`). To match a field against multiple values, repeat the plain field param (see **Multiple values for the same field mean IN** above): `?progress.status=wip&progress.status=rework`.
+</Warning>
 
 Complex AND/OR:
 
