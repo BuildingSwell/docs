@@ -1,15 +1,59 @@
 ---
-title: Rate limits
-description: Request rate limits and response headers for the BuildingSwell v2 API.
+title: "Rate limits"
+description: "Request limits, the headers that report them, and how to back off."
 ---
 
-| Endpoint | Limit |
-| -------- | ----- |
-| All endpoints | 3,000 requests / 60 sec |
-| `POST /*/import` | 100 requests / 60 sec |
+| Endpoints | Limit |
+| --------- | ----- |
+| Everything | 3,000 requests per 60 seconds |
+| `POST /*/import` | 100 requests per 60 seconds |
 
-Headers returned with every response:
+The import limit is separate and stricter, because an import can write thousands of
+rows per request.
 
-- `RateLimit-Limit`
-- `RateLimit-Remaining`
-- `RateLimit-Reset`
+## Headers
+
+Every response carries your current standing, so you can pace yourself without
+guessing:
+
+| Header | Meaning |
+| ------ | ------- |
+| `RateLimit-Limit` | Requests allowed in the window. |
+| `RateLimit-Remaining` | Requests left in the current window. |
+| `RateLimit-Reset` | Seconds until the window resets. |
+
+## When you go over
+
+You get a `429` with `code: "RATE_LIMITED"`. Wait for `RateLimit-Reset` seconds and
+retry.
+
+```json
+{
+  "message": "Too many requests",
+  "error": {
+    "message": "Too many requests",
+    "code": "RATE_LIMITED",
+    "requestId": "b0f4c8e2-1f3a-4c19-9d6e-7c8b2a5f1e40"
+  },
+  "context": {}
+}
+```
+
+<Note>
+  A `429` is the one response that repeats `message` at the top level, kept for
+  callers written against the older shape. Read `error.code` instead.
+</Note>
+
+## Staying under the limit
+
+Most integrations that hit the limit are making one request per record. Two habits
+fix that:
+
+- **Ask for more per page.** `pageSize` defaults to 50. Raising it means fewer
+  round-trips for the same data.
+- **Resolve ids in one call.** Instead of a `GET /worker/{id}` per row, join the
+  table or send one `POST /worker/query` with every id you need. See
+  [querying](/guides/querying).
+
+For a nightly sync, `GET /deliverable/export` moves up to 10,000 rows in a single
+request. See [import and export](/guides/import-export).

@@ -1,9 +1,13 @@
 ---
-title: Stage
-description: Stages — reusable, department-scoped shop stations.
+title: "Stage"
+description: "Reusable shop stations, scoped to a department."
 ---
 
-A **stage** — a reusable, Department-scoped (`shopId`) shop station. Deliverable stage nodes reference one via `data.stageId` (see [Domain concepts](/concepts/overview)).
+A stage is a shop station you reuse across jobs, such as Welding or Paint. It
+belongs to one department (`shopId`).
+
+Deliverable stage nodes point at one through `data.stageId`. See
+[domain concepts](/concepts/overview) for how that linkage works.
 
 **Search columns:** `name`
 
@@ -11,15 +15,53 @@ Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
 
 ## Fields
 
+Every property the API returns for a stage.
+
 | Field | Type | Notes |
 | ----- | ---- | ----- |
-| `id` | UUID | Auto-generated |
-| `organizationId` | UUID | From API key |
-| `name` | string | Required |
-| `shopId` | UUID | Required |
-| `description` | string \| null | |
-| `maxOrderCapacity` | integer | Required, non-negative |
-| `costCode` | string \| null | |
-| `isArchived` | boolean | Default `false` |
-| `createdAt` | date | Auto-generated |
-| `updatedAt` | date | Auto-generated |
+| `id` | UUID | Unique id. Generated on create unless you supply one. Server-managed. |
+| `organizationId` | UUID | Your organization. Taken from the API key, never from the request body. Read-only. |
+| `name` | string | Station name, for example `Welding`. **Required on create.** |
+| `shopId` | UUID | Department the station belongs to. **Required on create.** |
+| `description` | string \| null | What happens at this station. |
+| `maxOrderCapacity` | integer | How many orders the station can hold at once. Zero or greater. **Required on create.** |
+| `costCode` | string \| null | Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`. |
+| `isArchived` | boolean | Archived stations are hidden from list results unless you ask for them. Defaults to `false`. |
+| `createdAt` | date-time | When the record was created. Server-managed. |
+| `updatedAt` | date-time | When the record last changed. Server-managed. |
+
+<Note>
+  Stages carry no `identifier` and no `archivedAt`. They are keyed by name within
+  a department, so `isArchived` is the only lifecycle field.
+</Note>
+
+## Capacity
+
+`maxOrderCapacity` is how many orders the station holds at once. Planning uses it
+to tell you when a station is oversubscribed, so a value of `0` means the station
+takes no work rather than unlimited work.
+
+## What you can write
+
+Everything else in the table above is set by BuildingSwell.
+
+| Field | On create | On update |
+| ----- | --------- | --------- |
+| `name` | Required | Yes |
+| `shopId` | Required | Yes |
+| `description` | Optional | Yes |
+| `maxOrderCapacity` | Required | Yes |
+| `costCode` | Optional | Yes |
+| `isArchived` | Optional | Yes |
+
+## Deleting
+
+<Warning>
+  **`DELETE /stage/{id}` is destructive.**
+
+  Permanently removes the station. This is not the archive operation and it cannot be undone.
+
+  Deliverable stage nodes point at a station through `data.stageId`, which is a JSON value rather than a foreign key, so the database will not stop you. Those nodes keep an id that no longer resolves, and any QC entry referencing the station has its `stageId` set to `null`. Archive instead unless you are certain nothing points here.
+</Warning>
+
+See [archiving and deleting](/guides/archiving-and-deleting) for the full picture across resources.

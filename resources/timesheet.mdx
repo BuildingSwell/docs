@@ -1,92 +1,212 @@
 ---
-title: Timesheet
-description: Unified view of all time-tracking records (read-only).
+title: "Timesheet"
+description: "Read-only view over attendance check-ins and deliverable work sessions."
 ---
 
-Unified view of all time-tracking records. Aggregates attendance check-ins and deliverable work sessions.
+Timesheets are one read across all your time-tracking records. Attendance
+check-ins and deliverable work sessions come back in a single shape, so payroll
+and reporting integrations only have to understand one row type.
 
 <Warning>
-  **Read-only.** Only `GET /`, `GET /:id`, `GET /count`, `POST /count`, `POST /query`, and `POST /group-and-count` are available.
+  **Read-only.** Only `GET /timesheet`, `GET /timesheet/{id}`,
+  `GET /timesheet/count`, `POST /timesheet/count`, `POST /timesheet/query`, and
+  `POST /timesheet/group-and-count` exist. To write time, use
+  [work sessions](/resources/deliverable-work-sessions).
 </Warning>
 
 **Search columns:** `type`, `externalSync`, `externalSource`
 
 ## Fields
 
+Every property the API returns for a timesheet record.
+
 | Field | Type | Notes |
 | ----- | ---- | ----- |
-| `id` | UUID | Auto-generated |
-| `organizationId` | UUID | From API key |
-| `startDate` | date | Session start (UTC) |
-| `endDate` | date \| null | Session end; `null` = still open |
-| `workerId` | UUID | Worker who performed the work; resolve via `worker` |
-| `type` | string | See types below |
-| `shopId` | UUID | Shop the session belongs to |
-| `isEdited` | boolean | Whether manually edited |
-| `lastUpdatedBy` | UUID \| null | User who last modified |
-| `buildOrderId` | UUID \| null | Always `null` — retained in the schema but no longer populated by any row type |
-| `overheadId` | UUID \| null | Always `null` — retained in the schema but no longer populated by any row type |
-| `stageId` | UUID \| null | Always `null` — retained in the schema but no longer populated by any row type |
-| `deliverableId` | UUID \| null | Populated **only** for `deliverable_work_session` records |
-| `shiftWorkHours` | object \| null | Shift schedule (see below) |
-| `externalSource` | string \| null | Source system, e.g. `"quickbase"` |
-| `externalSync` | string | `"synced"` \| `"not synced"` \| `"none"` |
-| `metadata` | object | Flexible key-value store (e.g. `costCode`, `unionCode`) |
-| `createdAt` | date | Auto-generated |
-| `updatedAt` | date | Auto-generated |
+| `id` | UUID | Unique id of the underlying attendance or work-session row. Read-only. |
+| `organizationId` | UUID | Your organization. Taken from the API key. Read-only. |
+| `type` | enum | Which kind of record this is. Only these two exist. One of `attendance` \| `deliverable_work_session`. Read-only. |
+| `workerId` | UUID | Person the time belongs to. Resolve names through `/worker`. Read-only. |
+| `shopId` | UUID | Department the record belongs to. Read-only. |
+| `startDate` | date-time | When the record started, in UTC. Read-only. |
+| `endDate` | date-time \| null | When the record ended, in UTC. `null` means it is still open. Read-only. |
+| `deliverableId` | UUID \| null | Deliverable the time was logged against. Populated for `deliverable_work_session` rows only, and `null` for `attendance`. Read-only. |
+| `shiftWorkHours` | object \| null | The shift the record was worked against. Break times are local wall-clock, not UTC. Read-only. |
+| `breakTimeInSec` | integer \| null | Unpaid break seconds that fall inside this record's start/end window, computed by the database on every read. Read-only: it cannot be written, and it is `0` while the record is still open. |
+| `isEdited` | boolean | `true` when someone has edited the record by hand. Read-only. |
+| `lastUpdatedBy` | UUID \| null | Who last changed the record. Read-only. |
+| `metadata` | object | Free-form key-value store. No key is guaranteed to be present, and a missing key is not the same as a `null` one. See the resource guide for which paths populate `costCode` and `unionCode`. Read-only. |
+| `externalSource` | string \| null | System the record came from, for example `quickbase`. Read-only. |
+| `externalSync` | string | Sync state for the external system: `synced`, `not synced`, or `none`. Read-only. |
+| `stageId` | UUID \| null | Always `null`. Kept in the shape for backward compatibility. Read-only. |
+| `buildOrderId` | UUID \| null | Always `null`. Kept in the shape for backward compatibility. Read-only. |
+| `overheadId` | UUID \| null | Always `null`. Kept in the shape for backward compatibility. Read-only. |
+| `createdAt` | date-time | When the record was created. Read-only. |
+| `updatedAt` | date-time | When the record last changed. Read-only. |
 
-## `type` values
+### `shiftWorkHours`
 
-Only two row types exist today:
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `startTime` | string | Shift start as local wall-clock time, `HH:mm`. |
+| `endTime` | string | Shift end as local wall-clock time, `HH:mm`. |
+| `breaks` | object[] | Scheduled unpaid breaks for the shift. Omitted when the shift has none. |
+| `timezone` | string | IANA timezone of the shop the shift belongs to, stamped server-side. `breakTimeInSec` anchors each break's local time to this zone. Defaults to `UTC` when absent. |
 
-| Value | Description | Populated FK |
-| ----- | ----------- | ------------ |
-| `attendance` | Attendance check-in/out record | _(none)_ |
-| `deliverable_work_session` | Time logged against a specific deliverable node | `deliverableId` |
+Each entry in `breaks`:
 
-<Note>
-  `build_order_work_session` and `overhead_work_session` row types (and the `buildOrderId` / `overheadId` / `stageId` foreign keys they used) have been removed server-side. `buildOrderId`, `overheadId`, and `stageId` remain in the response shape for backward compatibility but are always `null`. Order/stage/phase attribution for `deliverable_work_session` rows now goes exclusively through `deliverableId` — see the join example below.
-</Note>
-
-## `shiftWorkHours` shape
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `startTime` | string | Break start as local wall-clock time, `HH:mm`. |
+| `durationInSec` | integer | How long the break lasts, in seconds. |
 
 ```json
 {
   "startTime": "08:00",
   "endTime": "17:00",
+  "timezone": "America/New_York",
   "breaks": [{ "startTime": "12:00", "durationInSec": 1800 }]
 }
 ```
 
-Times are in `HH:mm` format. `breaks` is optional.
+## Row types
+
+Two row types exist, and which one you are looking at decides what is populated.
+
+| `type` | What it is | Links to a deliverable |
+| ------ | ---------- | ---------------------- |
+| `attendance` | A check-in and check-out for the day. | No, `deliverableId` is `null`. |
+| `deliverable_work_session` | Time logged against one deliverable. | Yes, through `deliverableId`. |
+
+<Note>
+  `stageId`, `buildOrderId`, and `overheadId` are always `null`. The
+  `build_order_work_session` and `overhead_work_session` row types they belonged to
+  were removed server-side, and the three fields stay in the response so existing
+  integrations keep parsing. Attribute `deliverable_work_session` rows through
+  `deliverableId` instead, as shown below.
+</Note>
+
+## Break time and how it is carved out
+
+`breakTimeInSec` is the unpaid break time that falls inside a record's own
+start-to-end window. Paid time for a record is therefore:
+
+```text
+paidSeconds = (endDate - startDate) - breakTimeInSec
+```
+
+The value is computed by the database on every read, from the `breaks` array in
+`shiftWorkHours`. You cannot write it, and patching `breakTimeInSec` has no effect.
+
+### The carve-out rule
+
+A break only counts for the portion that **overlaps** the record. It is not a flat
+deduction, which is what makes short and split sessions come out right.
+
+Each break in `shiftWorkHours.breaks` has a local `startTime` and a
+`durationInSec`, giving it a window. That window is intersected with the record's
+window, and the overlapping seconds are summed across all breaks.
+
+Worked through, with a 30-minute lunch at 12:00 and a session that runs 08:00 to
+17:00:
+
+| Session | Break window | Overlap | `breakTimeInSec` |
+| ------- | ------------ | ------- | ---------------- |
+| 08:00 to 17:00 | 12:00 to 12:30 | The whole break | `1800` |
+| 08:00 to 11:00 | 12:00 to 12:30 | None | `0` |
+| 12:15 to 17:00 | 12:00 to 12:30 | 15 minutes | `900` |
+| 12:00 to 12:20 | 12:00 to 12:30 | 20 minutes | `1200` |
+
+So a person who clocks out before lunch loses nothing, and one who starts
+mid-break loses only the remainder.
+
+### Timezones
+
+Break times in `shiftWorkHours` are **local wall-clock**, not UTC. The shop's IANA
+timezone travels on the record in `shiftWorkHours.timezone`, stamped when the
+record is written, and each break is anchored to the local calendar day of
+`startDate`. A break with no timezone on the record is anchored to `UTC`.
+
+<Warning>
+  Two cases to expect:
+
+  - An **open record** (`endDate` is `null`) always reports `0`, because there is
+    no window to intersect yet. It fills in when the record is closed.
+  - On an **overnight shift**, breaks scheduled before the shift's start time are
+    anchored to `startDate`'s local day rather than rolled to the next day, so the
+    figure can differ from what the app shows at the day boundary.
+</Warning>
+
+## What is in `metadata`
+
+`metadata` is a free-form key-value store. **No key is guaranteed to be present**,
+and a missing key does not mean the same thing as a `null` one. That distinction
+is the source of most confusion here, so it is worth being precise about which
+code path writes what.
+
+| Key | When it is present | When it is `null` | When it is absent |
+| --- | ------------------ | ----------------- | ----------------- |
+| `costCode` | A cost code resolved when the session was created. | Never. | No cost code was found anywhere in the chain below. |
+| `unionCode` | The session was created by assigning someone to a deliverable. | That person had no `unionCode` on their record. | The session was created some other way, for example a direct `POST`. |
+| Anything else | Written by an external sync. | Depends on that system. | No sync wrote it. |
+
+Read it defensively. Treat every key as optional, and decide what an absent key
+means for your integration before you rely on it: for payroll, a missing `costCode`
+usually needs to fall back to a default rather than be sent as empty.
+
+### How `costCode` is resolved
+
+When a work session is created without `metadata.costCode`, BuildingSwell walks
+this chain and stops at the first cost code it finds:
+
+1. The deliverable itself.
+2. The station the deliverable is linked to, through `data.stageId`.
+3. The deliverable's ancestors, walking up the tree.
+4. The project the deliverable belongs to.
+5. The route the deliverable was built from, through `originTemplateId`.
+
+Nothing found means the key is left off the object rather than written as `null`.
+Setting a cost code on the project is the usual way to guarantee every session
+gets one.
+
+### `perDiemCode`
+
+No BuildingSwell code path writes `perDiemCode`. If you see it, an external sync
+put it there. Check `externalSource` to find out which one, and treat it as that
+system's field rather than an API field.
 
 ## Example queries
 
 ```bash
-# All open sessions (endDate is null)
+# Every open record
 GET /timesheet?endDate:isn=true
 
-# Sessions for a specific worker in a date range
-GET /timesheet?workerId=<uuid>&startDate:ge=2024-03-01&startDate:lt=2024-04-01
+# One person's records in a date range
+GET /timesheet?workerId=<uuid>&startDate:ge=2026-03-01&startDate:lt=2026-04-01
 
-# Count by type
+# Count by row type
 POST /timesheet/group-and-count
 { "groupByField": "type" }
 
-# Unsynced deliverable sessions
+# Work sessions an external system has not picked up yet
 GET /timesheet?type=deliverable_work_session&externalSync:ne=synced
 ```
 
-## Loading hours with Order / Stage / Phase attribution
+## Attributing hours to an order, stage, and phase
 
-For `deliverable_work_session` rows, the time is logged against a stage/phase/component node, and the **only** link to the build tree is `deliverableId` (`buildOrderId` and `stageId` are always `null`). To attribute each row to its Order, Stage and Phase, join the deliverable node and then **chain** further joins off it:
+For `deliverable_work_session` rows, the only link into the work tree is
+`deliverableId`. To get the order, station, and phase for each row, join the
+deliverable and then chain further joins off it.
 
-- a join's condition may reference **another join's alias** (not just the base table), so you can hop `timesheet → deliverable → order` in a single request;
-- declare the joins in dependency order — the join you reference (here `d`) must come **before** the joins that depend on it (`o`, `s`).
+Two rules make this work:
+
+- A join condition can reference **another join's alias**, not just the base
+  table, so you can hop from timesheet to deliverable to order in one request.
+- Declare joins in dependency order. The join you reference (`d` here) must come
+  **before** the joins that depend on it (`o` and `s`).
 
 ```bash
 curl "https://app.buildingswell.com/api/v2/timesheet?type=deliverable_work_session\
-&startDate:ge=2024-03-01&startDate:lt=2024-04-01\
+&startDate:ge=2026-03-01&startDate:lt=2026-04-01\
 &join:deliverable%20as%20d:id,name,type,rootParentId,data,computed=deliverableId%20eq%20d.id\
 &join:deliverable%20as%20o:id,name,identifier=o.id%20eq%20d.rootParentId\
 &join:stage%20as%20s:id,name=s.id%20eq%20d.data.stageId" \
@@ -95,16 +215,23 @@ curl "https://app.buildingswell.com/api/v2/timesheet?type=deliverable_work_sessi
 
 Each row comes back with:
 
-- `o.name`, `o.identifier` → the **Order** (joined via the node's `rootParentId`)
-- `s.name` → the **stage** (joined via the node's `data.stageId`)
-- `d.computed.phase` → the **Phase name** (read straight off the joined node)
+- `o.name` and `o.identifier` for the **order**, joined through the node's
+  `rootParentId`
+- `s.name` for the **station**, joined through the node's `data.stageId`
+- `d.computed.phase` for the **phase**, read straight off the joined node
 
 <Note>
-  The `s` join matches `stage.id` against `data->>'stageId'`; the engine casts both sides to `uuid` automatically. Phase/component nodes won't have a linked stage, so `s` is `null` for those rows — read `computed.phase` for the phase regardless.
+  The `s` join matches `stage.id` against `data->>'stageId'`, and the engine casts
+  both sides to `uuid` for you. Phase and component nodes have no linked station,
+  so `s` is `null` on those rows. Read `computed.phase` for the phase either way.
 </Note>
 
 <Tip>
-  **Alternative (no chaining):** join only the deliverable node, read `d.computed.phase` directly, collect the distinct `d.rootParentId` / `d.data.stageId` values, and resolve their names with bulk `POST /deliverable/query` and `POST /stage/query` calls. Same result, more round-trips.
+  **Without chaining:** join only the deliverable, read `d.computed.phase`
+  directly, then collect the distinct `d.rootParentId` and `d.data.stageId` values
+  and resolve their names with bulk `POST /deliverable/query` and
+  `POST /stage/query` calls. Same answer, more round-trips.
 </Tip>
 
-`attendance` rows have no build-tree attribution — `deliverableId`, `buildOrderId`, `overheadId`, and `stageId` are all `null` for them.
+`attendance` rows have no work-tree attribution at all: `deliverableId`,
+`stageId`, `buildOrderId`, and `overheadId` are all `null`.

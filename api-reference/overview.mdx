@@ -1,22 +1,64 @@
 ---
-title: API reference overview
-description: Interactive reference for BuildingSwell v2 API endpoints.
+title: "API reference overview"
+description: "How to read this reference and try requests from the browser."
 ---
 
-This section provides interactive endpoint documentation generated from the OpenAPI specification.
+Every endpoint below is generated from the OpenAPI specification, so the fields you
+see in the request and response panels are the fields the API actually accepts and
+returns.
 
-## Authentication
+## Trying requests
 
-All endpoints require the `X-API-Key` header. Set your key in the playground to try requests.
+Paste your key into the playground's **X-API-Key** field and you can send real
+requests from these pages. They run against your own organization, so anything you
+create, change, or delete is real.
+
+<Warning>
+  The playground sends live requests. Take care with `DELETE` and `PATCH /bulk`, and
+  see [archiving and deleting](/guides/archiving-and-deleting) before you try a
+  delete.
+</Warning>
+
+The server field defaults to `app.buildingswell.com`. Change `{instance}` if you are
+pointed at a different host.
 
 ## Base URL
 
-```
+```text
 https://app.buildingswell.com/api/v2
 ```
 
-## Standard CRUD
+## How the groups are organized
 
-Most resources follow the same endpoint pattern documented in [standard endpoints](/guides/standard-endpoints). This reference lists the concrete paths for each resource group.
+Each resource group lists its endpoints in the same order: the collection, then a
+single record, then counts and queries, then the bulk routes, then anything specific
+to that resource.
 
-For querying, filtering, and joins, see the [querying guide](/guides/querying).
+Most resources share one CRUD and query pattern. Rather than repeating it on every
+endpoint, it is written up once:
+
+<Columns cols={2}>
+  <Card title="Standard endpoints" icon="list" href="/guides/standard-endpoints">
+    The shared CRUD pattern, `?update=` on upserts, and why bulk delete returns
+    `403`.
+  </Card>
+  <Card title="Querying" icon="filter" href="/guides/querying">
+    Filters, operators, `select`, search, and joins.
+  </Card>
+  <Card title="Response format" icon="brackets-curly" href="/guides/response-format">
+    Response envelopes, error codes, and what to branch on.
+  </Card>
+  <Card title="Resources" icon="database" href="/resources/project">
+    Field-by-field reference with the behavior behind each one.
+  </Card>
+</Columns>
+
+## Reading the field tables
+
+- **Read-only** fields are returned but ignored on write. `computed` on a
+  deliverable is the largest example.
+- **Required on create** marks the few fields you must send. Everything else falls
+  back to a default.
+- A type of `string | null` means the field can hold `null`. That is different from
+  the field being absent, which matters most for
+  [timesheet metadata](/resources/timesheet#what-is-in-metadata).

@@ -1,7 +1,10 @@
 ---
-title: Group and count
-description: Group records by a field and return counts.
+title: "Group and count"
+description: "Group records by a field and count each group."
 ---
+
+Group and count answers "how many of each" without pulling the records themselves.
+Every resource has it.
 
 ```http
 POST /deliverable/group-and-count
@@ -9,16 +12,62 @@ POST /deliverable/group-and-count
 { "groupByField": "type" }
 ```
 
-Group by multiple fields:
+```json
+{
+  "values": [
+    { "groupId": "phase", "count": 128 },
+    { "groupId": "stage", "count": 64 }
+  ],
+  "hasMore": false
+}
+```
+
+`groupId` is the value you grouped by, so its type follows the field: a string for
+`type`, a UUID for `computed.projectId`, a boolean for `isArchived`.
+
+## Group by more than one field
+
+Pass an array for a compound grouping. `groupId` then holds the combination:
 
 ```json
 { "groupByField": ["computed.projectId", "type"] }
 ```
 
-For array fields (e.g. tags), use `unnestGroupByField` to count individual values:
+## Nested paths work
+
+Any path you can filter on, you can group on:
+
+```json
+{ "groupByField": "progress.status" }
+```
+
+## Array fields need `unnestGroupByField`
+
+Grouping by an array field counts whole arrays by default, which is rarely what you
+want. Set `unnestGroupByField` to count each value separately:
 
 ```json
 { "groupByField": "computed.tags", "unnestGroupByField": true }
 ```
 
-All standard filter params work here too.
+Without it, `["urgent", "rework"]` is one group. With it, `urgent` and `rework` each
+get their own count, and a record with both tags counts once in each.
+
+## Filters apply
+
+Every filter the list endpoint takes works here too, so you can scope a breakdown
+the same way you would scope a query:
+
+```bash
+curl -X POST "https://app.buildingswell.com/api/v2/deliverable/group-and-count" \
+  -H "X-API-Key: <key>" -H "Content-Type: application/json" \
+  -d '{
+        "groupByField": "progress.status",
+        "filter": "type eq '\''stage'\'' and isArchived eq false"
+      }'
+```
+
+<Note>
+  `groupByField` is required, and it only accepts field-name characters. A value
+  with anything else in it is rejected with `400`.
+</Note>

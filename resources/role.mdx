@@ -1,33 +1,88 @@
 ---
-title: Role
-description: Permission roles.
+title: "Role"
+description: "Named permission sets you assign to users."
 ---
 
-Permission roles. Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+A role is a named set of permissions. Users carry a role through their
+[organization membership](/resources/organization-member).
 
 **Search columns:** `name`, `description`
 
+Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+
 <Info>
-  Requires admin access or the `Role.Read` / `Role.Update` permission.
+  Requires admin access, or the `Role.Read` and `Role.Update` permissions.
 </Info>
 
 ## Fields
 
+Every property the API returns for a role.
+
 | Field | Type | Notes |
 | ----- | ---- | ----- |
-| `id` | UUID | Auto-generated |
-| `organizationId` | UUID | From API key |
-| `name` | string | Required |
-| `description` | string \| null | |
-| `permissions` | string[] | Legacy permission strings |
-| `permissionsV2` | object[] | Fine-grained permission statements |
-| `createdAt` | date | Auto-generated |
-| `updatedAt` | date | Auto-generated |
+| `id` | UUID | Unique id. Generated on create unless you supply one. Server-managed. |
+| `organizationId` | UUID | Your organization. Taken from the API key, never from the request body. Read-only. |
+| `name` | string | Role name. At least one character. **Required on create.** |
+| `description` | string \| null | What the role is for. |
+| `permissions` | string[] | Legacy flat permission strings. Defaults to empty. |
+| `permissionsV2` | object[] | Fine-grained permission statements. This is the form the app writes today. |
+| `isApiKey` | boolean | `true` for the synthetic role behind an API key. Leave it alone on roles you create. Defaults to `false`. |
+| `createdAt` | date-time | When the record was created. Server-managed. |
+| `updatedAt` | date-time | When the record last changed. Server-managed. |
+
+## Two permission fields
+
+`permissionsV2` is the form BuildingSwell writes today: a list of statements, each
+naming a subject, the actions it allows, and optional row and field limits.
+`permissions` is the older flat list of strings, kept so existing integrations keep
+working. Read both, and write `permissionsV2`.
+
+### Statement shape
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `subject` | string | What the statement is about, for example `worker` or `deliverable`. |
+| `actions` | enum[] | Actions the statement grants. |
+| `tableName` | string | Table the statement resolves against, when it differs from `subject`. |
+| `filters` | object | Row filter limiting which records the statement covers. |
+| `fields` | object | Per-field limits, as a map from field name to the actions allowed on it (`read`, `update`). |
 
 ## Duplicate a role
 
+Copying an existing role is usually faster than assembling permissions from
+scratch:
+
 ```http
-POST /role/:id/duplicate
+POST /role/<id>/duplicate
 ```
 
-Response: `{ "value": { ... } }` — a new role with a unique name and the same permissions.
+You get back a new role with the same permissions under a unique name.
+
+<Note>
+  `isApiKey` marks the synthetic role behind an API key. Leave it alone on roles
+  you create.
+</Note>
+
+## What you can write
+
+Everything else in the table above is set by BuildingSwell.
+
+| Field | On create | On update |
+| ----- | --------- | --------- |
+| `name` | Required | Yes |
+| `description` | Optional | Yes |
+| `permissions` | Optional | Yes |
+| `permissionsV2` | Optional | Yes |
+| `isApiKey` | Optional | Yes |
+
+## Deleting
+
+<Warning>
+  **`DELETE /role/{id}` is destructive.**
+
+  Permanently removes the role. This cannot be undone and there is no archive for roles.
+
+  Users assigned to the role keep pointing at an id that no longer resolves, which leaves them without permissions. Move them to another role first with `PATCH /organization-member/{id}`.
+</Warning>
+
+See [archiving and deleting](/guides/archiving-and-deleting) for the full picture across resources.

@@ -1,12 +1,65 @@
 ---
-title: QC template
-description: QC template versions.
+title: "QC template"
+description: "Published versions of QC templates."
 ---
 
-QC template versions.
+A QC template version is the set of questions an inspection set gets filled from.
+Templates are versioned, so this resource lists versions rather than templates:
+`qcTemplateId` is the template, and `versionNumber` is the revision.
+
+**Search columns:** `name`
+
+## Fields
+
+Every property the API returns for a QC template version.
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Unique id of this version. Read-only. |
+| `organizationId` | UUID | Your organization. Taken from the API key. Read-only. |
+| `qcTemplateId` | UUID | The template these versions belong to. Read-only. |
+| `name` | string | Template name. Read-only. |
+| `versionNumber` | number | Version number within the template. Read-only. |
+| `isDraft` | boolean | `true` while the version is still a draft. Read-only. |
+| `requiresPassFail` | boolean | `true` when the template ends in a pass/fail verdict rather than being questions-only. Read-only. |
+| `questions` | object \| null | The template's questions. Shape is set by the template editor. Read-only. |
+| `createdAt` | date-time | When the version was created. Read-only. |
+| `updatedAt` | date-time | When the version last changed. Read-only. |
 
 <Warning>
-  **Read and delete only.** `POST /` and `PATCH /:id` are not usable: `POST /` always fails server-side, and `PATCH /:id` silently accepts the request but writes nothing. Manage QC templates through the BuildingSwell UI; use this resource to read and delete existing versions.
+  **Read and delete only.** `POST /qc-template` always fails server-side, and
+  `PATCH /qc-template/{id}` accepts the request but writes nothing. Build and edit
+  templates in the BuildingSwell app, and use this resource to read and to remove
+  versions.
 </Warning>
 
-Only `GET /`, `GET /:id`, `GET /count`, `POST /count`, `POST /query`, `POST /group-and-count`, and `DELETE /:id` are supported. See [standard endpoints](/guides/standard-endpoints).
+Available endpoints: `GET /qc-template`, `GET /qc-template/{id}`,
+`GET /qc-template/count`, `POST /qc-template/count`, `POST /qc-template/query`,
+`POST /qc-template/group-and-count`, and `DELETE /qc-template/{id}`.
+
+## Pass/fail versus questions-only
+
+`requiresPassFail` separates the two kinds of template. A pass/fail template ends
+in a verdict and acts as a gate. A questions-only template captures a reason and
+records it, which is why the automatic hold and due-date forms use it.
+
+## Drafts
+
+`isDraft` is `true` while a version is still being edited. Filter drafts out when
+you only want versions in use:
+
+```http
+GET /qc-template?isDraft=false
+```
+
+## Deleting
+
+<Warning>
+  **`DELETE /qc-template/{id}` is destructive.**
+
+  Permanently removes the template version. This cannot be undone.
+
+  QC sets reference a version through `templateId`, and that link is `ON DELETE RESTRICT`, so the call comes back as `409` while any set still points at this version.
+</Warning>
+
+See [archiving and deleting](/guides/archiving-and-deleting) for the full picture across resources.

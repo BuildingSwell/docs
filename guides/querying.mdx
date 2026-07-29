@@ -1,7 +1,11 @@
 ---
-title: Querying
-description: Pagination, sorting, field selection, search, filtering, and joins.
+title: "Querying"
+description: "Pagination, sorting, field selection, search, filtering, and joins."
 ---
+
+Every list endpoint takes the same query options, so what you learn here applies to
+all of them. `POST /{resource}/query` accepts the same options in the body when your
+query is too long for a URL.
 
 ## Pagination
 
@@ -9,9 +13,10 @@ description: Pagination, sorting, field selection, search, filtering, and joins.
 GET /project?page=1&pageSize=50
 ```
 
-- `page` — one-based; the first page is `1` (default `1`). `page=0` is invalid and returns an error.
-- `pageSize` — results per page (default `50`)
-- Response includes `hasMore: boolean`
+- `page` starts at `1`, and defaults to `1`. `page=0` is rejected.
+- `pageSize` defaults to `50`.
+- The response includes `hasMore`, so page until it is `false` rather than counting
+  first.
 
 ## Sorting
 
@@ -20,15 +25,19 @@ GET /project?orderBy=name:asc
 GET /project?orderBy[]=name:asc&orderBy[]=createdAt:desc
 ```
 
-## Select specific fields
+Repeat `orderBy[]` to sort by more than one field, in the order you list them.
 
-A comma-separated value in a single `select` parameter is **not** supported and is silently ignored. Repeat the parameter instead:
+## Returning only some fields
+
+Repeat the `select` parameter once per field. A single comma-separated value is
+**silently ignored**, which is worth knowing because the request still succeeds and
+returns everything:
 
 ```http
 GET /project?select=id&select=name&select=identifier
 ```
 
-Or, for `POST /project/query`, pass `select` as a JSON array in the body:
+In a `POST /{resource}/query` body, pass an array instead:
 
 ```json
 { "select": ["id", "name", "identifier"] }
@@ -41,23 +50,25 @@ GET /project?search=warehouse
 GET /project?search=warehouse:name,identifier
 ```
 
-Append `:column1,column2` to limit search to specific columns.
+Append `:column1,column2` to search specific columns. Each resource page lists its
+search columns, and searching a resource that has none has no effect.
 
 ## Filtering
 
-Simple equality:
+For simple equality, use the field name directly:
 
 ```http
 GET /project?name=Warehouse A
 GET /deliverable?type=phase&type=route
 ```
 
-Multiple values for the same field mean **IN**.
+Repeating a field means **any of these values**, so the second example returns both
+phases and routes.
 
-With operators:
+Add an operator with a colon:
 
 ```http
-GET /deliverable?createdAt:gt=2024-01-01
+GET /deliverable?createdAt:gt=2026-01-01
 ```
 
 | Operator | Meaning |
@@ -65,35 +76,59 @@ GET /deliverable?createdAt:gt=2024-01-01
 | `:eq` | Equals |
 | `:ne` | Not equals |
 | `:gt` | Greater than |
-| `:ge` | Greater than or equal |
+| `:ge` | Greater than or equal to |
 | `:lt` | Less than |
-| `:le` | Less than or equal |
+| `:le` | Less than or equal to |
 | `:isn` | Is null |
 | `:isnn` | Is not null |
 
 <Warning>
-  There is no `:in` operator — a filter like `progress.status:in=wip,rework` is accepted by the query parser but fails at the database layer (`500`). To match a field against multiple values, repeat the plain field param (see **Multiple values for the same field mean IN** above): `?progress.status=wip&progress.status=rework`.
+  **There is no `:in` operator.** A filter like `progress.status:in=wip,rework` is
+  accepted by the parser and then fails at the database with a `500`. To match
+  several values, repeat the plain field parameter instead:
+
+  ```http
+  GET /deliverable?progress.status=wip&progress.status=rework
+  ```
 </Warning>
 
-Complex AND/OR:
+For anything with AND or OR in it, use `filter`:
 
 ```http
 GET /deliverable?filter=type eq 'phase' and isArchived eq false
 GET /deliverable?filter=(type eq 'stage' or type eq 'step') and progress.status ne 'done'
 ```
 
+Nested paths work in both styles, so `computed.projectId` and `progress.status`
+filter the same way a top-level column does.
+
 ## Joining related data
+
+Joins let you resolve names in one request instead of following ids around.
 
 ```http
 GET /deliverable?join:project:id,name=projectId eq relation.id
 GET /deliverable?join:project as p:name=projectId eq p.id
 ```
 
-Format: `?join:<table>:<fields>=<condition>`
+The format is `?join:<table>:<fields>=<condition>`. Use `relation` to refer to the
+joined table when you have not aliased it, or give it an alias with `as` and use
+that.
 
-- **Multiple joins:** pass several `join:` params in one request to join several tables.
-- **Chained joins:** a condition may reference **another join's alias** (not only the base table), so you can hop across joined tables — e.g. join `deliverable as d`, then `deliverable as o` on `o.id eq d.rootParentId`. Declare a join **before** any join that references it. Conditions support JSONB paths (`d.data.stageId`) and id-fields are cast automatically. See the [timesheet](/resources/timesheet) attribution example.
+Three things make joins more capable than they first look:
+
+- Pass several `join:` parameters in one request to join several tables.
+- A condition can reference **another join's alias**, not just the base table, so
+  you can hop across joined tables in a single request. Declare a join **before**
+  any join that references it.
+- Conditions support JSONB paths such as `d.data.stageId`, and id fields are cast
+  for you.
+
+Chaining is what makes hours reportable. The
+[timesheet attribution example](/resources/timesheet#attributing-hours-to-an-order-stage-and-phase)
+walks through going from a timesheet row to its order, station, and phase in one
+call.
 
 <Warning>
-  Joins to sensitive internal tables (e.g. `api_key`) are blocked.
+  Joins to internal tables such as `api_key` are blocked.
 </Warning>

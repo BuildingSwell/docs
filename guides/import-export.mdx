@@ -1,18 +1,48 @@
 ---
-title: Import and export
-description: Excel import and export for deliverables.
+title: "Import and export"
+description: "Bulk file transfer for deliverables, work sessions, and users."
 ---
 
-Import and export are available on **deliverables only**.
+Three resources on the public API move data as files.
+
+| Resource | Export | Import |
+| -------- | ------ | ------ |
+| [Deliverables](/resources/deliverable) | Excel and JSON | Excel and JSON |
+| [Work sessions](/resources/deliverable-work-sessions) | Excel | No, sessions are derived rows |
+| [Users](/resources/organization-member) | Excel | Excel |
+
+<Warning>
+  Import endpoints are rate limited to 100 requests per minute, separately from the
+  general limit. See [rate limits](/getting-started/rate-limits).
+</Warning>
 
 ## Export
+
+Exports accept the same filters as the matching list endpoint, so you can narrow a
+file the same way you would narrow a query.
 
 ```http
 GET /deliverable/export
 GET /deliverable/export?isArchived:eq=false&timezone=America/New_York
 ```
 
-Returns a `.xlsx` file (max 10,000 rows). Accepts the same filters as `GET /deliverable`.
+You get back a `.xlsx` file, capped at 10,000 rows. Pass `timezone` as an IANA name
+to have dates rendered in that zone rather than UTC.
+
+For JSON instead of a workbook:
+
+```http
+GET /deliverable/export/json
+```
+
+The work-session export is worth calling out: it works out hours and break time per
+row for you, so you do not have to reproduce the
+[break carve-out rule](/resources/timesheet#break-time-and-how-it-is-carved-out)
+yourself.
+
+```http
+GET /deliverable/work-sessions/export
+```
 
 ## Import
 
@@ -24,7 +54,21 @@ file=<xlsx file>           # required
 timezone=America/New_York  # optional
 ```
 
-Only `.xlsx`, max 10 MB. Row-level and file-structure problems (missing required columns, a circular parent reference, an unresolved parent identifier, etc.) are returned as `200` with details in the body — they do **not** fail the HTTP request:
+Only `.xlsx`, up to 10 MB. The JSON form takes an array in the body and upserts on
+`identifier`:
+
+```http
+POST /deliverable/import/json
+Content-Type: application/json
+
+[{ "identifier": "ORD-1", "name": "Warehouse A", "type": "order" }]
+```
+
+### A `200` does not mean everything imported
+
+This is the part to get right. Row problems and file-structure problems come back as
+`200` with detail in the body. They do **not** fail the HTTP request, so a client
+that only checks the status code will treat a fully rejected file as a success.
 
 ```json
 { "imported": 3, "errors": [], "warnings": [] }
@@ -46,8 +90,29 @@ Only `.xlsx`, max 10 MB. Row-level and file-structure problems (missing required
 }
 ```
 
-`row: 0` means the error applies to the whole file rather than a specific row (e.g. a missing required column). A genuinely unreadable file (corrupt `.xlsx`, or a workbook with no sheets) is the one case that does **not** come back as `200` — it throws and surfaces as a `500`.
+Always read `errors` and compare `imported` against the row count you sent.
 
-<Warning>
-  Import endpoints are rate-limited to 100 requests/min.
-</Warning>
+| Field | What it tells you |
+| ----- | ----------------- |
+| `imported` | How many rows were written. |
+| `errors` | Blocking problems. Nothing from those rows was written. |
+| `warnings` | Non-blocking problems. Those rows were written with something adjusted or ignored. |
+
+`row` is 1-based. **`row: 0` means the problem applies to the whole file** rather
+than one line, for example a missing required column.
+
+`kind` tells you where the problem came from, which is usually enough to decide
+whether to fix the file or fix your export:
+
+| `kind` | Meaning |
+| ------ | ------- |
+| `structure` | The file's shape is wrong, such as a missing column. |
+| `parse` | A cell could not be read as its column's type. |
+| `validation` | A value was readable but not allowed. |
+| `resolution` | A reference pointed at something that does not exist, such as an unknown parent identifier. |
+| `server` | Something failed on our side while writing the row. |
+
+<Note>
+  One failure is not a `200`: a file the server cannot open at all, such as a
+  corrupt `.xlsx` or a workbook with no sheets, surfaces as a `500`.
+</Note>

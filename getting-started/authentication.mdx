@@ -1,16 +1,54 @@
 ---
-title: Authentication
-description: Authenticate API requests with an organization-scoped API key.
+title: "Authentication"
+description: "Authenticate requests with an organization-scoped API key."
 ---
 
-Include your API key in every request:
+Send your API key in an `X-API-Key` header on every request:
 
 ```http
 X-API-Key: <your-api-key>
 ```
 
-Keys are scoped to your organization — all data is automatically filtered to that org.
+```bash
+curl "https://app.buildingswell.com/api/v2/project" \
+  -H "X-API-Key: <your-api-key>"
+```
 
-<Info>
-  API keys are created and managed exclusively through the BuildingSwell UI (Organization settings → API keys) — there is no public API for managing keys. The secret is shown exactly once at creation time and cannot be retrieved again, so store it immediately.
-</Info>
+A missing or invalid key comes back as `401` with `code: "UNAUTHORIZED"`.
+
+## Keys are scoped to one organization
+
+Your key belongs to a single organization, and every query is filtered to it before
+it runs. You cannot read another organization's data, and `organizationId` on any
+record you create is taken from the key rather than from your request body. Sending
+your own `organizationId` has no effect.
+
+## Getting a key
+
+API keys are created in the BuildingSwell app, under **Organization settings → API
+keys**. There is no public API for managing keys.
+
+<Warning>
+  The secret is shown once, when you create the key. It cannot be retrieved
+  afterwards, so store it in your secrets manager before you close the dialog. If
+  you lose it, create a new key and revoke the old one.
+</Warning>
+
+## Permissions
+
+A key carries a role, the same way a user does, and record-level permissions apply
+to it. A call your key is not permitted to make returns `403` with the permissions
+it is short of:
+
+```json
+{
+  "error": {
+    "message": "Insufficient permissions",
+    "code": "FORBIDDEN",
+    "missingPermissions": ["worker.create"]
+  }
+}
+```
+
+Give a key the narrowest role that covers what your integration does. A reporting
+integration that reads timesheets does not need write access to deliverables.
