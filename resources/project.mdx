@@ -1,7 +1,10 @@
 ---
-title: Project
-description: Projects group orders and other work in BuildingSwell.
+title: "Project"
+description: "Customer jobs. Projects group the orders and other work you deliver."
 ---
+
+A project is one customer job. Orders hang off a project, and most reporting rolls
+up to it.
 
 **Identifier prefix:** `PROJ-`
 **Search columns:** `name`, `identifier`
@@ -10,16 +13,120 @@ Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
 
 ## Fields
 
+Every property the API returns for a project.
+
 | Field | Type | Notes |
 | ----- | ---- | ----- |
-| `id` | UUID | Auto-generated |
-| `organizationId` | UUID | From API key |
-| `identifier` | string | Auto-generated, e.g. `PROJ-a1b2c` |
-| `name` | string | Required |
-| `scheduledStartDate` | date \| null | ISO 8601 |
-| `scheduledEndDate` | date \| null | ISO 8601 |
-| `actualEndDate` | date \| null | ISO 8601 |
-| `costCode` | string \| null | |
-| `isArchived` | boolean | Default `false` |
-| `createdAt` | date | Auto-generated |
-| `updatedAt` | date | Auto-generated |
+| `id` | UUID | Unique id. Generated on create unless you supply one. Server-managed. |
+| `organizationId` | UUID | Your organization. Taken from the API key, never from the request body. Read-only. |
+| `identifier` | string | Human-readable id, unique within your organization. Generated in the form `PROJ-a1b2c` when you leave it out. |
+| `name` | string | Display name. **Required on create.** |
+| `isArchived` | boolean | Archived records are hidden from list results unless you ask for them. Set this to archive or restore the record. Defaults to `false`. |
+| `archivedAt` | date-time \| null | When the record was archived. Set automatically when `isArchived` flips to `true`, and cleared on restore. Server-managed. |
+| `scheduledStartDate` | date \| null | Planned start of the project. |
+| `scheduledEndDate` | date \| null | Planned finish of the project. |
+| `actualEndDate` | date \| null | Date the project actually finished. |
+| `costCode` | string \| null | Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`. |
+| `createdAt` | date-time | When the record was created. Server-managed. |
+| `updatedAt` | date-time | When the record last changed. Server-managed. |
+
+## Creating a project
+
+Only `name` is required:
+
+```bash
+curl -X POST "https://app.buildingswell.com/api/v2/project" \
+  -H "X-API-Key: <key>" -H "Content-Type: application/json" \
+  -d '{ "name": "Warehouse A", "costCode": "WH-A" }'
+```
+
+Leave `identifier` out and you get one like `PROJ-a1b2c`. Send your own if you
+already have a project number in another system, and it becomes the value you can
+look the project up by later.
+
+### Every project gets a Jobsite
+
+Creating a project also creates one project-owned Jobsite location, in the same
+transaction. Your projects always have somewhere to ship to, and you never have to
+create the Jobsite yourself.
+
+Pass an address on create and it lands on that Jobsite:
+
+```bash
+curl -X POST "https://app.buildingswell.com/api/v2/project" \
+  -H "X-API-Key: <key>" -H "Content-Type: application/json" \
+  -d '{
+        "name": "Warehouse A",
+        "jobsiteAddress": {
+          "addressLine1": "1200 Industrial Way",
+          "city": "Toledo",
+          "stateOrProvince": "OH",
+          "postalCode": "43604",
+          "country": "US"
+        }
+      }'
+```
+
+`jobsiteAddress` is create-only, and a few things follow from that:
+
+- Every field inside it is optional, so a partial address is fine.
+- `country` accepts `US` and `CA`.
+- `PATCH`, `PUT`, and the bulk routes ignore the field rather than rejecting it.
+- It never comes back in a project response. Send the object with all fields
+  blank, or leave it out, and the Jobsite is created without an address.
+
+## What you can write
+
+Everything else in the table above is set by BuildingSwell.
+
+| Field | On create | On update |
+| ----- | --------- | --------- |
+| `identifier` | Optional | Yes |
+| `name` | Required | Yes |
+| `isArchived` | Optional | Yes |
+| `scheduledStartDate` | Optional | Yes |
+| `scheduledEndDate` | Optional | Yes |
+| `actualEndDate` | Optional | Yes |
+| `costCode` | Optional | Yes |
+| `jobsiteAddress` | Optional | No, create only |
+
+## Archive and restore
+
+There is no separate archive endpoint. Flip `isArchived` with a `PATCH`, and BuildingSwell handles the rest.
+
+```bash
+# Archive
+PATCH /project/<id>
+{ "isArchived": true }
+
+# Restore
+PATCH /project/<id>
+{ "isArchived": false }
+```
+
+When you archive:
+
+- `name` and `identifier` both get an ` - (archived <timestamp>)` suffix, where `<timestamp>` is the archive time in epoch milliseconds, so they stop colliding with your active projects. Match the suffix with a pattern, not a literal string.
+- `archivedAt` is stamped with the current time.
+
+When you restore, the suffix comes off. If an active project has taken the original name or identifier in the meantime, the next free variant is used instead, for example `Warehouse A (1)`.
+
+Archived records drop out of list results by default. Ask for them with an explicit filter:
+
+```http
+GET /project?isArchived=true
+```
+
+## Deleting
+
+<Warning>
+  **`DELETE /project/{id}` is destructive.**
+
+  Permanently removes the project row. This is not the archive operation and it cannot be undone.
+
+  In practice this call fails with `409` for any project created through the API or the app. Every project owns at least one Jobsite location, and that link is `ON DELETE RESTRICT`, so the database refuses the delete while the Jobsite exists. Archive the project instead: `PATCH /project/{id}` with `{ "isArchived": true }`.
+
+  If the delete does go through, `qc_inspection_set.projectId` on any related QC entry is set to `null` and the entry itself is kept.
+</Warning>
+
+See [archiving and deleting](/guides/archiving-and-deleting) for the full picture across resources.

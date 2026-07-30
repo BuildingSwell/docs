@@ -40,7 +40,11 @@
       "proxy": true
     },
     "examples": {
-      "languages": ["bash", "javascript", "python"],
+      "languages": [
+        "bash",
+        "javascript",
+        "python"
+      ],
       "defaults": "all",
       "autogenerate": true
     }
@@ -67,8 +71,8 @@
               "guides/standard-endpoints",
               "guides/querying",
               "guides/response-format",
-              "guides/group-and-count",
-              "guides/import-export"
+              "guides/archiving-and-deleting",
+              "guides/group-and-count"
             ]
           },
           {
@@ -80,10 +84,7 @@
               "resources/deliverable",
               "resources/deliverable-dependencies",
               "resources/deliverable-work-sessions",
-              "resources/comment",
               "resources/document",
-              "resources/note",
-              "resources/notification",
               "resources/qc-inspection-set",
               "resources/qc-template",
               "resources/timesheet",
@@ -95,12 +96,16 @@
           {
             "group": "Domain concepts",
             "icon": "git-branch",
-            "pages": ["concepts/overview"]
+            "pages": [
+              "concepts/overview"
+            ]
           },
           {
             "group": "Examples",
             "icon": "terminal",
-            "pages": ["examples"]
+            "pages": [
+              "examples"
+            ]
           }
         ]
       },
@@ -110,24 +115,27 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": ["api-reference/overview"]
+            "pages": [
+              "api-reference/overview"
+            ]
           },
           {
             "group": "Projects",
             "openapi": "openapi.yaml",
             "pages": [
               "GET /project",
-              "GET /project/{id}",
               "POST /project",
+              "GET /project/{id}",
               "PATCH /project/{id}",
               "PUT /project/{id}",
               "DELETE /project/{id}",
               "GET /project/count",
               "POST /project/count",
               "POST /project/query",
+              "POST /project/group-and-count",
               "PATCH /project/bulk",
               "PUT /project/bulk",
-              "POST /project/group-and-count"
+              "DELETE /project/bulk"
             ]
           },
           {
@@ -135,13 +143,18 @@
             "openapi": "openapi.yaml",
             "pages": [
               "GET /stage",
-              "GET /stage/{id}",
               "POST /stage",
+              "GET /stage/{id}",
               "PATCH /stage/{id}",
               "PUT /stage/{id}",
               "DELETE /stage/{id}",
+              "GET /stage/count",
+              "POST /stage/count",
               "POST /stage/query",
-              "POST /stage/group-and-count"
+              "POST /stage/group-and-count",
+              "PATCH /stage/bulk",
+              "PUT /stage/bulk",
+              "DELETE /stage/bulk"
             ]
           },
           {
@@ -149,23 +162,28 @@
             "openapi": "openapi.yaml",
             "pages": [
               "GET /deliverable",
-              "GET /deliverable/{id}",
               "POST /deliverable",
+              "GET /deliverable/{id}",
               "PATCH /deliverable/{id}",
               "PUT /deliverable/{id}",
-              "PUT /deliverable/bulk",
               "DELETE /deliverable/{id}",
+              "GET /deliverable/count",
+              "POST /deliverable/count",
               "POST /deliverable/query",
               "POST /deliverable/group-and-count",
-              "GET /deliverable/{id}/hierarchy",
+              "PATCH /deliverable/bulk",
+              "PUT /deliverable/bulk",
+              "DELETE /deliverable/bulk",
+              "POST /deliverable/archive/batch",
+              "GET /deliverable/crew-time",
+              "POST /deliverable/crew-time",
               "POST /deliverable/groups",
               "POST /deliverable/reorder",
-              "GET /deliverable/crew-time",
+              "POST /deliverable/restore/batch",
+              "POST /deliverable/root/{rootId}/progress/{id}",
               "POST /deliverable/root/{rootId}/schedule/{id}",
               "POST /deliverable/schedule/batch",
-              "POST /deliverable/root/{rootId}/progress/{id}",
-              "GET /deliverable/export",
-              "POST /deliverable/import"
+              "GET /deliverable/{id}/hierarchy"
             ]
           },
           {
@@ -174,6 +192,18 @@
             "pages": [
               "GET /deliverable/work-sessions",
               "POST /deliverable/work-sessions",
+              "GET /deliverable/work-sessions/{id}",
+              "PATCH /deliverable/work-sessions/{id}",
+              "PUT /deliverable/work-sessions/{id}",
+              "DELETE /deliverable/work-sessions/{id}",
+              "GET /deliverable/work-sessions/count",
+              "POST /deliverable/work-sessions/count",
+              "POST /deliverable/work-sessions/query",
+              "POST /deliverable/work-sessions/group-and-count",
+              "PATCH /deliverable/work-sessions/bulk",
+              "PUT /deliverable/work-sessions/bulk",
+              "DELETE /deliverable/work-sessions/bulk",
+              "POST /deliverable/work-sessions/error-ids",
               "POST /deliverable/work-sessions/save",
               "POST /deliverable/work-sessions/stop"
             ]
@@ -183,25 +213,19 @@
             "openapi": "openapi.yaml",
             "pages": [
               "GET /deliverable/dependencies",
-              "GET /deliverable/dependencies/{id}",
               "POST /deliverable/dependencies",
+              "GET /deliverable/dependencies/{id}",
               "PATCH /deliverable/dependencies/{id}",
+              "PUT /deliverable/dependencies/{id}",
               "DELETE /deliverable/dependencies/{id}",
+              "GET /deliverable/dependencies/count",
+              "POST /deliverable/dependencies/count",
+              "POST /deliverable/dependencies/query",
+              "POST /deliverable/dependencies/group-and-count",
+              "PATCH /deliverable/dependencies/bulk",
+              "PUT /deliverable/dependencies/bulk",
+              "DELETE /deliverable/dependencies/bulk",
               "GET /deliverable/dependencies/{id}/hierarchy"
-            ]
-          },
-          {
-            "group": "Comments",
-            "openapi": "openapi.yaml",
-            "pages": [
-              "GET /comment",
-              "GET /comment/{id}",
-              "POST /comment",
-              "PATCH /comment/{id}",
-              "PUT /comment/{id}",
-              "DELETE /comment/{id}",
-              "POST /comment/query",
-              "POST /comment/group-and-count"
             ]
           },
           {
@@ -209,35 +233,18 @@
             "openapi": "openapi.yaml",
             "pages": [
               "GET /document",
-              "GET /document/{id}",
               "POST /document",
+              "GET /document/{id}",
               "PATCH /document/{id}",
               "PUT /document/{id}",
               "DELETE /document/{id}",
-              "POST /document/query"
-            ]
-          },
-          {
-            "group": "Notes",
-            "openapi": "openapi.yaml",
-            "pages": [
-              "GET /note",
-              "GET /note/{id}",
-              "POST /note",
-              "PATCH /note/{id}",
-              "PUT /note/{id}",
-              "DELETE /note/{id}",
-              "PUT /note/by-deliverable"
-            ]
-          },
-          {
-            "group": "Notifications",
-            "openapi": "openapi.yaml",
-            "pages": [
-              "GET /notification",
-              "GET /notification/{id}",
-              "POST /notification/read-channel-comments",
-              "POST /notification/read-deliverable-documents"
+              "GET /document/count",
+              "POST /document/count",
+              "POST /document/query",
+              "POST /document/group-and-count",
+              "PATCH /document/bulk",
+              "PUT /document/bulk",
+              "DELETE /document/bulk"
             ]
           },
           {
@@ -245,13 +252,25 @@
             "openapi": "openapi.yaml",
             "pages": [
               "GET /qc-inspection-set",
-              "GET /qc-inspection-set/{id}",
               "POST /qc-inspection-set",
+              "GET /qc-inspection-set/{id}",
               "PATCH /qc-inspection-set/{id}",
+              "PUT /qc-inspection-set/{id}",
               "DELETE /qc-inspection-set/{id}",
+              "GET /qc-inspection-set/count",
+              "POST /qc-inspection-set/count",
+              "POST /qc-inspection-set/query",
+              "POST /qc-inspection-set/group-and-count",
+              "PATCH /qc-inspection-set/bulk",
+              "PUT /qc-inspection-set/bulk",
+              "DELETE /qc-inspection-set/bulk",
               "GET /qc-template",
               "GET /qc-template/{id}",
-              "DELETE /qc-template/{id}"
+              "DELETE /qc-template/{id}",
+              "GET /qc-template/count",
+              "POST /qc-template/count",
+              "POST /qc-template/query",
+              "POST /qc-template/group-and-count"
             ]
           },
           {
@@ -259,11 +278,18 @@
             "openapi": "openapi.yaml",
             "pages": [
               "GET /worker",
-              "GET /worker/{id}",
               "POST /worker",
+              "GET /worker/{id}",
               "PATCH /worker/{id}",
+              "PUT /worker/{id}",
+              "DELETE /worker/{id}",
+              "GET /worker/count",
+              "POST /worker/count",
               "POST /worker/query",
-              "POST /worker/group-and-count"
+              "POST /worker/group-and-count",
+              "PATCH /worker/bulk",
+              "PUT /worker/bulk",
+              "DELETE /worker/bulk"
             ]
           },
           {
@@ -272,39 +298,68 @@
             "pages": [
               "GET /timesheet",
               "GET /timesheet/{id}",
+              "GET /timesheet/count",
+              "POST /timesheet/count",
               "POST /timesheet/query",
               "POST /timesheet/group-and-count"
             ]
           },
           {
-            "group": "Organization",
+            "group": "Roles",
             "openapi": "openapi.yaml",
             "pages": [
               "GET /role",
               "POST /role",
-              "POST /role/{id}/duplicate",
-              "GET /organization-member",
-              "POST /organization-member",
-              "PATCH /organization-member/{id}",
-              "PATCH /organization-member/{id}/deactivate",
-              "PATCH /organization-member/{id}/reactivate",
-              "POST /organization-member/{id}/invite/resend"
+              "GET /role/{id}",
+              "PATCH /role/{id}",
+              "PUT /role/{id}",
+              "DELETE /role/{id}",
+              "GET /role/count",
+              "POST /role/count",
+              "POST /role/query",
+              "POST /role/group-and-count",
+              "PATCH /role/bulk",
+              "PUT /role/bulk",
+              "DELETE /role/bulk",
+              "POST /role/{id}/duplicate"
             ]
           },
           {
-            "group": "Concepts",
+            "group": "Users",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /organization-member",
+              "POST /organization-member",
+              "GET /organization-member/{id}",
+              "PATCH /organization-member/{id}",
+              "PUT /organization-member/{id}",
+              "DELETE /organization-member/{id}",
+              "GET /organization-member/count",
+              "POST /organization-member/count",
+              "POST /organization-member/query",
+              "POST /organization-member/group-and-count",
+              "PATCH /organization-member/bulk",
+              "PUT /organization-member/bulk",
+              "DELETE /organization-member/bulk",
+              "PATCH /organization-member/{id}/deactivate",
+              "POST /organization-member/{id}/invite/resend",
+              "PATCH /organization-member/{id}/reactivate"
+            ]
+          },
+          {
+            "group": "Domain concepts",
             "openapi": "openapi.yaml",
             "pages": [
               "GET /concepts",
-              "GET /concepts/orders/{id}/context",
-              "GET /concepts/routes/{id}",
-              "GET /concepts/stage-masters",
               "POST /concepts/deliverables",
               "PATCH /concepts/deliverables/{id}",
-              "POST /concepts/orders/from-route",
               "POST /concepts/deliverables/{id}/apply-route",
+              "POST /concepts/orders/from-route",
+              "GET /concepts/orders/{id}/context",
+              "POST /concepts/root/{rootId}/progress/{id}/apply",
               "POST /concepts/root/{rootId}/progress/{id}/plan",
-              "POST /concepts/root/{rootId}/progress/{id}/apply"
+              "GET /concepts/routes/{id}",
+              "GET /concepts/stage-masters"
             ]
           }
         ]

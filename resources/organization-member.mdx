@@ -1,39 +1,44 @@
 ---
-title: Users (Organization Members)
-description: Members of the organization.
+title: "Users (Organization members)"
+description: "User accounts and the roles they carry in your organization."
 ---
 
 <Note>
-  The BuildingSwell UI calls this resource **Users**; the API calls it `organization-member`. This page uses `organization member` throughout to match the API.
+  The BuildingSwell app calls this **Users**. The API calls it
+  `organization-member`. This page uses the API name so it matches the requests you
+  write.
 </Note>
 
-Members of the organization. Standard CRUD applies with a custom create — see below.
+A membership joins a user account to your organization and gives it a role. The
+account itself is shared across organizations, which is why its email and name
+arrive under a nested `appUser` object.
 
 **Search columns:** `appUser.name`, `appUser.email`
 
 <Info>
-  Requires admin access or the `User.Read` / `User.Update` permission.
+  Requires admin access, or the `User.Read` and `User.Update` permissions.
 </Info>
 
 ## Fields
 
+Every property the API returns for a user.
+
 | Field | Type | Notes |
 | ----- | ---- | ----- |
-| `id` | UUID | Auto-generated |
-| `organizationId` | UUID | From API key |
-| `appUserId` | UUID | Associated user account |
-| `roleId` | UUID \| null | Assigned role |
-| `roleType` | string | `"admin"` \| `"custom"` |
-| `status` | string | `"active"` \| `"deactivated"` |
-| `appUser.email` | string | Joined from user account |
-| `appUser.name` | string | Joined from user account |
-| `appUser.status` | string | `"pending"` \| `"verified"` |
-| `createdAt` | date | Auto-generated |
-| `updatedAt` | date | Auto-generated |
+| `id` | UUID | Unique id of the membership. Server-managed. |
+| `organizationId` | UUID | Your organization. Taken from the API key, never from the request body. Read-only. |
+| `appUserId` | UUID | The user account behind this membership. **Required on create.** |
+| `roleId` | UUID \| null | Role the user carries. |
+| `roleType` | enum | `admin` grants everything. `custom` follows `roleId`. One of `admin` \| `custom`. Defaults to `custom`. |
+| `status` | enum | Whether the user can sign in. One of `active` \| `deactivated`. Defaults to `active`. |
+| `appUser` | object | Fields joined from the user account. Read-only here, and searchable as `appUser.name` and `appUser.email`. |
+| `createdAt` | date-time | When the record was created. Server-managed. |
+| `updatedAt` | date-time | When the record last changed. Server-managed. |
 
-## Invite a member
+## Invite a user
 
-Replaces standard `POST /`:
+`POST /organization-member` replaces the standard create. You send an email
+address, not a user id:
 
 ```http
 POST /organization-member
@@ -45,23 +50,59 @@ POST /organization-member
 }
 ```
 
-Creates a new user account if the email doesn't exist yet and sends an invitation email.
+If no account exists for that email, one is created. Either way an invitation goes
+out and `appUser.status` stays `pending` until the person accepts.
 
-**Update a member** (`PATCH /:id`) — updatable fields: `roleId`, `roleType`, `workerId` (pass `null` to unlink worker).
-
-## Deactivate / reactivate
-
-```http
-PATCH /organization-member/:id/deactivate
-PATCH /organization-member/:id/reactivate
-```
-
-Both respond with `204 No Content`.
-
-## Resend invite
+Resend it if the first one was missed:
 
 ```http
-POST /organization-member/:id/invite/resend
+POST /organization-member/<id>/invite/resend
 ```
 
-Response: `204 No Content`
+## Update a membership
+
+`PATCH /organization-member/{id}` accepts `roleId`, `roleType`, and `workerId`.
+Pass `workerId: null` to unlink the [person](/resources/worker) record.
+
+## Deactivate instead of deleting
+
+Deactivating takes away access but keeps the membership and its history, and it
+reverses cleanly:
+
+```http
+PATCH /organization-member/<id>/deactivate
+PATCH /organization-member/<id>/reactivate
+```
+
+Both respond `204` with no body. Reach for these rather than
+`DELETE /organization-member/{id}`.
+
+## Two status fields
+
+`status` is the membership: whether the person can use your organization.
+`appUser.status` is the account: whether they have accepted their invite and
+verified their email. A `pending` account with an `active` membership is someone
+who was invited and has not signed in yet.
+
+## What you can write
+
+Everything else in the table above is set by BuildingSwell.
+
+| Field | On create | On update |
+| ----- | --------- | --------- |
+| `appUserId` | Required | No |
+| `roleId` | Optional | Yes |
+| `roleType` | Optional | Yes |
+| `status` | Optional | No |
+
+## Deleting
+
+<Warning>
+  **`DELETE /organization-member/{id}` is destructive.**
+
+  Permanently removes the membership, which cuts the user's access to your organization. This cannot be undone.
+
+  To take access away reversibly, use `PATCH /organization-member/{id}/deactivate` instead. That keeps the membership and its history, and it can be reversed with `/reactivate`.
+</Warning>
+
+See [archiving and deleting](/guides/archiving-and-deleting) for the full picture across resources.

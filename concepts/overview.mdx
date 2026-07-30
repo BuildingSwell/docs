@@ -1,15 +1,26 @@
 ---
-title: Domain concepts
-description: Concept-aware endpoints that enforce nesting rules and validation on top of deliverables.
+title: "Domain concepts"
+description: "Deliverable writes with the nesting rules and per-concept fields enforced."
 ---
 
-The `deliverable` resource is intentionally generic — one model implements nine domain concepts via its `type` field. The `/concepts` endpoints are a **concept-aware layer on top of `deliverable`**: they speak the domain language (Orders, Routes, Phases, Stages, Steps, QC Steps, Departments) and **enforce the rules** the raw deliverable endpoints do not (valid nesting, required fields per concept, stage linkage, Department scoping). Prefer these over raw `deliverable` writes.
+The [deliverable](/resources/deliverable) resource is deliberately generic: one model
+carries nine domain concepts, and its `type` field decides which one a node is. That
+keeps the model simple, and it means the raw endpoints will accept a tree that makes
+no sense.
+
+The `/concepts` endpoints sit on top of the same data and enforce the rules. They
+speak the domain language, and they check what the raw endpoints do not: valid
+nesting, the fields each concept requires, station linkage, and department scoping.
+
+**Prefer these for writes.** Reads are the same either way, so use `GET /deliverable`
+with its filters and joins when you are reading.
 
 <Info>
-  Terminology: a **Department** is a `shop` (`data.shopId`). `null` = cross-department.
+  A **department** is a shop, carried as `data.shopId`. `null` means the node applies
+  across departments.
 </Info>
 
-## Nesting grammar (enforced)
+## The nesting grammar
 
 ```text
 order          (root)  → phase | component | stage
@@ -17,61 +28,107 @@ route          (root)  → phase | component | stage          # reusable templat
 overhead       (root)  → (leaf)
 template-phase (root)  → (leaf)
 phase          → phase | component | stage                  # containers nest freely
-component      → phase | component | stage                  #   any depth, both directions
-stage          → step | qcstep                              # only steps / qc steps
-step           → (leaf)                                      # must be under a stage
-qcstep         → (leaf)                                      # must be under a stage
+component      → phase | component | stage                  #   any depth, either way
+stage          → step | qcstep                              # steps and QC steps only
+step           → (leaf)                                     # must be under a stage
+qcstep         → (leaf)                                     # must be under a stage
 ```
 
-`POST /concepts/deliverables` rejects anything outside this grammar (e.g. a `step` under an `order`).
+`POST /concepts/deliverables` rejects anything outside this grammar with a `400`, so
+a `step` under an `order` fails here rather than becoming a node the app cannot
+display.
+
+You do not have to hard-code this. `GET /concepts` returns the same grammar as data,
+which lets you validate a payload before you send it.
 
 ## Concept reference
 
-`*` = required in `data`. Every node also has the base `deliverable` columns (`identifier`, `quantity`, `schedule`, `progress`, `computed`, …).
+`*` marks a field that is required in `data`. Every node also carries the base
+deliverable columns: `identifier`, `quantity`, `schedule`, `progress`, `computed`,
+and the rest.
 
 | Concept | Identifier | Required `data` | Other `data` | Notes |
 | ------- | ---------- | --------------- | ------------ | ----- |
-| `order` | `ORD-` (auto) | `projectId*` | `dueDate, notes, tags, workerIds, workOrder, shopId` | Only type with `schedule` + `progress`. |
-| `route` | `RUT-` (auto) | — | `description, shopId, tags, workerIds` | `shopId` null ⇒ cross-Department process route. |
-| `overhead` | auto | `category*` | `shopId` | Leaf; time via `deliverable_work_session`. |
-| `template-phase` | auto | — | `shopId, workerIds, isProduction` | Reusable phase header. |
-| `phase` | user/auto | — | `dueDate, shopId, isProduction, linkedRouteId, position, tags, workerIds` | `linkedRouteId` = sub-route applied on apply. |
-| `component` | user/auto | — | `dueDate, linkedRouteId, tags, workerIds` | Quantity-bearing sub-assembly. |
-| `stage` | user/auto | `stageId*` ([stage](/resources/stage)) | `dueDate, position, tags, workerIds` | See resolve-or-create below. |
-| `step` | auto | — | — | Uses top-level `cycleTimeSec`/`peopleNum`/`quantity`. |
-| `qcstep` | auto | `qcTemplateId*` | — | QC gate. |
+| `order` | `ORD-` (auto) | `projectId*` | `dueDate`, `notes`, `tags`, `workerIds`, `workOrder`, `shopId` | The only type carrying `schedule` and `progress`. |
+| `route` | `RUT-` (auto) | none | `description`, `shopId`, `tags`, `workerIds` | A `null` `shopId` makes it a cross-department process route. |
+| `overhead` | auto | `category*` | `shopId` | A leaf. Time is tracked through work sessions. |
+| `template-phase` | auto | none | `shopId`, `workerIds`, `isProduction` | Reusable phase header. |
+| `phase` | yours or auto | none | `dueDate`, `shopId`, `isProduction`, `linkedRouteId`, `position`, `tags`, `workerIds` | `linkedRouteId` is a sub-route applied when the parent is applied. |
+| `component` | yours or auto | none | `dueDate`, `linkedRouteId`, `tags`, `workerIds` | Quantity-bearing sub-assembly. |
+| `stage` | yours or auto | `stageId*` | `dueDate`, `position`, `tags`, `workerIds` | Links a [stage](/resources/stage). See below. |
+| `step` | auto | none | none | Uses the top-level `cycleTimeSec`, `peopleNum`, and `quantity`. |
+| `qcstep` | auto | `qcTemplateId*` | none | A QC gate. |
 
-Identifiers may be user-set or auto-generated for any type; if omitted, the server auto-generates one.
+You can set `identifier` yourself on any type. Leave it out and one is generated.
 
-## Stage nodes must link a stage (resolve-or-create)
+## Stage nodes and their station
 
-A stage node always carries `data.stageId` pointing to a **[stage](/resources/stage)** (a reusable, Department-scoped shop station). On `POST /concepts/deliverables`:
+A stage node always carries `data.stageId` pointing at a
+[stage](/resources/stage), which is a reusable station scoped to one department. On
+create, three things can happen:
 
-- if `data.stageId` is supplied → it's validated (exists, and its Department matches the stage node's resolved Department);
-- otherwise the layer **resolves-or-creates** a stage named after the node in the node's Department (`data.shopId`, or the nearest ancestor's Department) and links it.
-- A stage node with neither `stageId` nor a resolvable Department is **rejected** (a stage is Department-scoped, so a Department is required to find/create one).
+- **You send `data.stageId`.** It is validated: the station has to exist, and its
+  department has to match the node's resolved department.
+- **You leave it out.** The layer finds or creates a station named after the node, in
+  the node's department, and links it. You get sensible stations without having to
+  pre-create them.
+- **You leave it out and no department can be resolved.** The request is rejected. A
+  station belongs to a department, so without one there is nothing to search or
+  create in.
 
-A stage node's effective Department is its own `data.shopId`, else the nearest ancestor's (exposed as `computed.shopId`). `null` = cross-Department.
+A node's effective department is its own `data.shopId`, or the nearest ancestor's if
+it has none. Either way it is exposed as `computed.shopId`.
 
-## Apply / compose
+## Applying routes
 
-Setting `originTemplateId` (e.g. on order create from a route) or a container's `data.linkedRouteId` applies that route/template's structure under the node. Routes compose recursively and are cycle-protected. Applying a Department-scoped route **overrides** the target's Department.
+Setting `originTemplateId` on create, or `data.linkedRouteId` on a container, applies
+that route's structure underneath the node. Routes compose recursively and are
+cycle-protected, so a route that references itself through another route is rejected
+rather than expanding forever.
+
+Applying a department-scoped route **overrides** the target's department.
 
 ## Endpoints
 
-| Method & path | Description |
-| ------------- | ----------- |
-| `GET /concepts` | Machine-readable concept registry — every concept with `kind`, `allowedParents`/`allowedChildren`, `requires`, `dataFields`, `identifier`, `hasSchedule`/`hasProgress`/`departmentScoped`. Response: `{ "concepts": [...] }`. |
-| `GET /concepts/orders/:id/context` | An order as a compact context object: `{ orderId, order, rollup, blocked }`. `rollup` = `{ nodeCount, byType, byStatus, edges, late, atRisk, onHold, currentPhases, currentStageIds }`. Query: `blockedLimit` (default 25). |
-| `GET /concepts/routes/:id` | Route summary + tree `rollup`. |
-| `GET /concepts/stage-masters?departmentId=<shopId>` | Stages, optionally filtered by Department. Response: `{ "values": [...] }`. |
-| `POST /concepts/deliverables` | Create a node with concept validation. Body: `{ type, name, parentId?, rootParentId?, identifier?, quantity?, cycleTimeSec?, durationSec?, peopleNum?, costCode?, originTemplateId?, data? }`. `201` with the compact node. |
-| `PATCH /concepts/deliverables/:id` | Update `name` / `costCode` / `data` with the same per-concept validation. |
-| `POST /concepts/orders/from-route` | Instantiate an order from a route. Body: `{ routeId, projectId, name, identifier?, quantity?, dueDate? }`. `201` with the new order's context. |
-| `POST /concepts/deliverables/:id/apply-route` | Apply a route under an existing `order`/`phase`/`component`. Body: `{ routeId }`. |
-| `POST /concepts/root/:rootId/progress/:id/plan` | Preflight a progress action (no write). Body: a progress action (`{ type, quantity? }`). |
-| `POST /concepts/root/:rootId/progress/:id/apply` | Apply the progress action (cascades, stops work sessions, removes worker plans for nodes that become done). |
+| Method and path | What it does |
+| --------------- | ------------ |
+| `GET /concepts` | The concept registry as data: every concept with `kind`, `allowedParents`, `allowedChildren`, `requires`, `dataFields`, `identifier`, `hasSchedule`, `hasProgress`, and `departmentScoped`. Returns `{ "concepts": [...] }`. |
+| `GET /concepts/orders/{id}/context` | One order's standing: `{ orderId, order, rollup, blocked }`. `rollup` holds `nodeCount`, `byType`, `byStatus`, `edges`, `late`, `atRisk`, `onHold`, `currentPhases`, and `currentStageIds`. `blockedLimit` defaults to 25. |
+| `GET /concepts/routes/{id}` | A route with the same tree rollup. |
+| `GET /concepts/stage-masters?departmentId=<shopId>` | Stations, optionally narrowed to one department. |
+| `POST /concepts/deliverables` | Create a node with validation. `201` with the node. |
+| `PATCH /concepts/deliverables/{id}` | Change `name`, `costCode`, or `data` with the same validation. |
+| `POST /concepts/orders/from-route` | Create an order for a project from a route, bringing the route's structure with it. |
+| `POST /concepts/deliverables/{id}/apply-route` | Apply a route under an existing `order`, `phase`, or `component`. |
+| `POST /concepts/root/{rootId}/progress/{id}/plan` | Work out what a progress action would do, without writing. |
+| `POST /concepts/root/{rootId}/progress/{id}/apply` | Apply it, cascading through the tree, stopping work sessions, and clearing daily-plan assignments for nodes that become `done`. |
+
+<Tip>
+  Call `/plan` before `/apply` for anything destructive, such as `rework`. It returns
+  the effect and writes nothing, which gives you something concrete to show someone
+  before they commit.
+</Tip>
 
 <Note>
-  All `/concepts` writes respect the caller's record permissions (e.g. creating a stage needs `stage:create`; route flow edges need `deliverable_dependency:create`).
+  Concept writes still respect your key's record permissions. Creating a station
+  needs `stage:create`, and the flow edges a route brings with it need
+  `deliverable_dependency:create`.
 </Note>
+
+## Starting an order from a route
+
+This is the common path for work that follows a standard process:
+
+```bash
+curl -X POST "https://app.buildingswell.com/api/v2/concepts/orders/from-route" \
+  -H "X-API-Key: <key>" -H "Content-Type: application/json" \
+  -d '{
+        "routeId": "<routeId>",
+        "projectId": "<projectId>",
+        "name": "Warehouse A, run 3",
+        "dueDate": "2026-04-15T00:00:00.000Z"
+      }'
+```
+
+You get back the new order's context, so you can see the tree the route produced
+without a second read.

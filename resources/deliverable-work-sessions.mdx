@@ -1,11 +1,99 @@
 ---
-title: Deliverable work sessions
-description: Work sessions on deliverables.
+title: "Deliverable work sessions"
+description: "Time one person logged against one deliverable."
 ---
 
-Work sessions on deliverables. Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+A work session is time one person spent on one deliverable. A session with no
+`endDate` is still running.
+
+Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+
+For a single read across both work sessions and attendance, use
+[timesheets](/resources/timesheet) instead.
+
+## Fields
+
+Every property the API returns for a work session.
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Unique id. Generated on create unless you supply one. Server-managed. |
+| `organizationId` | UUID | Your organization. Taken from the API key, never from the request body. Read-only. |
+| `deliverableId` | UUID | Deliverable the time was logged against. **Required on create.** |
+| `workerId` | UUID | Person who did the work. **Required on create.** |
+| `shopId` | UUID | Department the session belongs to. **Required on create.** |
+| `startDate` | date-time | When the session started, in UTC. **Required on create.** |
+| `endDate` | date-time \| null | When the session ended, in UTC. `null` means it is still open. |
+| `isEdited` | boolean | `true` when someone has edited the session by hand. Defaults to `false`. |
+| `lastUpdatedBy` | UUID \| null | Who last changed the session. |
+| `shiftWorkHours` | object \| null | The shift the record was worked against. Break times are local wall-clock, not UTC. |
+| `breakTimeInSec` | integer \| null | Unpaid break seconds that fall inside this record's start/end window. The database derives it whenever the record is written, from `startDate`, `endDate`, and `shiftWorkHours`. Read-only: it cannot be written, and it is `0` while the record is still open. |
+| `externalSource` | string \| null | System the session came from, for example `quickbase`. |
+| `externalSync` | string | Sync state for the external system. Defaults to `not synced`. |
+| `metadata` | object | Free-form key-value store. No key is guaranteed to be present, and a missing key is not the same as a `null` one. See the resource guide for which paths populate `costCode` and `unionCode`. |
+| `createdAt` | date-time | When the record was created. Server-managed. |
+| `updatedAt` | date-time | When the record last changed. Server-managed. |
+
+### `shiftWorkHours`
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `startTime` | string | Shift start as local wall-clock time, `HH:mm`. |
+| `endTime` | string | Shift end as local wall-clock time, `HH:mm`. |
+| `breaks` | object[] | Scheduled unpaid breaks for the shift. Omitted when the shift has none. |
+| `timezone` | string | IANA timezone of the shop the shift belongs to, stamped server-side. `breakTimeInSec` anchors each break's local time to this zone. Defaults to `UTC` when absent. |
+
+Each entry in `breaks`:
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `startTime` | string | Break start as local wall-clock time, `HH:mm`. |
+| `durationInSec` | integer | How long the break lasts, in seconds. |
+
+```json
+{
+  "startTime": "08:00",
+  "endTime": "17:00",
+  "timezone": "America/New_York",
+  "breaks": [{ "startTime": "12:00", "durationInSec": 1800 }]
+}
+```
+
+## What BuildingSwell fills in for you
+
+Two fields are resolved on create when you leave them out, which is usually what
+you want:
+
+- **`shiftWorkHours`** comes from the person's shop shift for `startDate`, with the
+  shop's timezone stamped onto it. That timezone is what `breakTimeInSec` anchors
+  break times to, so letting the server fill this in keeps break math correct.
+- **`metadata.costCode`** is resolved from the deliverable, then its station, then
+  its ancestors, then the project, then the route. If none of those carry a cost
+  code, the key is left off rather than written as `null`. See
+  [cost code resolution](/resources/timesheet#how-costcode-is-resolved).
+
+`metadata.unionCode` is different: it is written only when a session is created by
+assigning someone to a deliverable, and it is set to that person's `unionCode` or
+`null`. A session you create with a direct `POST` has no `unionCode` key at all.
+
+## Break time
+
+`breakTimeInSec` is computed by the database from `shiftWorkHours.breaks`, carving
+out only the break time that overlaps the session's own window. It is read-only,
+and it reports `0` while the session is open. The rule is worked through in full
+under [break time and how it is carved out](/resources/timesheet#break-time-and-how-it-is-carved-out).
+
+## One open session per pair
+
+A person can hold only one open session per deliverable. A second attempt comes
+back as `409`, which makes retries safe: if your first request timed out but
+landed, the retry tells you so rather than double-counting the hours.
 
 ## Save assignments
+
+`POST /deliverable/work-sessions/save` sets who is working on what and works out
+the difference itself, so you send the desired end state rather than a list of
+changes.
 
 ```http
 POST /deliverable/work-sessions/save
@@ -15,12 +103,19 @@ POST /deliverable/work-sessions/save
     "<workerId>": ["<deliverableId1>", "<deliverableId2>"]
   },
   "shopId": "<uuid>",
-  "startDate": "2024-03-01T08:00:00.000Z",
+  "startDate": "2026-03-01T08:00:00.000Z",
   "shouldStopEntireBatch": false
 }
 ```
 
-`assignments` is keyed by **worker id**; each value is the array of deliverable ids that worker should be assigned to (at least one per worker). `shopId` is required; `startDate` defaults to now. The call diffs against each worker's currently open sessions — starting sessions for added deliverables and stopping them for removed ones (absent workers get a saved plan instead of an immediate session). Responds `204 No Content`.
+`assignments` is keyed by person id, and each value is that person's full list of
+deliverables, with at least one entry. `shopId` is required, and `startDate`
+defaults to now.
+
+The call compares your list against each person's currently open sessions: it
+starts sessions for deliverables you added and stops sessions for ones you dropped.
+Someone marked absent gets a saved plan instead of a live session, which starts
+when they check in. Responds `204` with no body.
 
 ## Stop sessions
 
@@ -30,8 +125,56 @@ POST /deliverable/work-sessions/stop
 {
   "deliverableIds": ["<uuid>"],
   "workerIds": ["<uuid>"],
-  "endDate": "2024-03-01T17:00:00.000Z"
+  "endDate": "2026-03-01T17:00:00.000Z"
 }
 ```
 
-**At least one** of `deliverableIds` or `workerIds` is required (`endDate` is optional, defaults to now). A request with neither is rejected with a validation error — there is **no** "stop everything" shortcut. Responds `204 No Content`.
+Send at least one of `deliverableIds` or `workerIds`. A request with neither is
+rejected: there is deliberately no way to stop every open session in one call.
+`endDate` defaults to now. Responds `204` with no body.
+
+Two behaviors to know about when someone is on several deliverables at once:
+
+- The elapsed time is **split evenly** across all of that person's open sessions,
+  so an hour spent across three deliverables books 20 minutes each rather than an
+  hour three times.
+- Any session you did not explicitly stop is **restarted** from that point, so
+  dropping one deliverable from a batch does not stop the rest.
+
+An `endDate` earlier than a session's own start collapses that session to zero
+duration instead of writing negative time.
+
+## Find problem sessions
+
+`POST /deliverable/work-sessions/error-ids` returns the ids of sessions that
+overlap another session for the same person, or that run past the shift they belong
+to. It takes the same filters as the list endpoint, in the body, so you can check a
+whole pay period in one call before you trust the hours in it.
+
+## What you can write
+
+Everything else in the table above is set by BuildingSwell.
+
+| Field | On create | On update |
+| ----- | --------- | --------- |
+| `deliverableId` | Required | Yes |
+| `workerId` | Required | Yes |
+| `shopId` | Required | Yes |
+| `startDate` | Required | Yes |
+| `endDate` | Optional | Yes |
+| `isEdited` | Optional | Yes |
+| `lastUpdatedBy` | Optional | Yes |
+| `shiftWorkHours` | Optional | Yes |
+| `externalSource` | Optional | Yes |
+| `externalSync` | Optional | Yes |
+| `metadata` | Optional | Yes |
+
+## Deleting
+
+<Warning>
+  **`DELETE /deliverable/work-sessions/{id}` is destructive.**
+
+  Permanently removes the session and the hours on it. This cannot be undone, and there is no archive for sessions. To close a session instead of deleting it, set `endDate` or call `POST /deliverable/work-sessions/stop`.
+</Warning>
+
+See [archiving and deleting](/guides/archiving-and-deleting) for the full picture across resources.

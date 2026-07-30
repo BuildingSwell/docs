@@ -1,50 +1,76 @@
 ---
-title: BuildingSwell Public API (v2)
-description: Everything you need to integrate with the BuildingSwell v2 API.
+title: "BuildingSwell Public API (v2)"
+description: "Read and write your shop's projects, work, people, and hours."
 ---
 
-Everything you need to integrate with the BuildingSwell v2 API.
+The v2 API gives you your BuildingSwell data: projects and the orders under them,
+the work tree from phases down to individual steps, your people, and every hour
+logged against a job.
 
-## Base URL
+Base URL:
 
 ```text
 https://app.buildingswell.com/api/v2
 ```
 
-All responses are `Content-Type: application/json`, except multipart for Excel imports.
+Every request and response is `application/json`.
 
 ## Quick start
 
 <Steps>
-  <Step title="Get an API key">
-    Create an API key in BuildingSwell (requires admin access). The `secretKey` is returned exactly once on creation — store it immediately.
+  <Step title="Create an API key">
+    In the BuildingSwell app, go to **Organization settings → API keys**. Admin
+    access is required. The secret is shown once, so store it before you close the
+    dialog.
   </Step>
-  <Step title="Authenticate requests">
-    Include your API key in every request:
+  <Step title="Make your first request">
+    Send the key in an `X-API-Key` header:
 
     ```bash
-    curl "https://app.buildingswell.com/api/v2/project" \
+    curl "https://app.buildingswell.com/api/v2/project?pageSize=5" \
       -H "X-API-Key: <your-api-key>"
     ```
+
+    You get back `{ "values": [...], "hasMore": false }`.
   </Step>
-  <Step title="Explore resources">
-    Every resource supports a standard CRUD pattern. Start with [standard endpoints](/guides/standard-endpoints) or jump to a specific [resource](/resources/project).
+  <Step title="Learn the shared pattern">
+    Resources share one CRUD and query shape, so
+    [standard endpoints](/guides/standard-endpoints) and
+    [querying](/guides/querying) cover most of what you need. After that, go
+    straight to the [resource](/resources/project) you care about.
   </Step>
 </Steps>
 
-## What to read next
+## Where to start
 
 <Columns cols={2}>
-  <Card title="Authentication" icon="key" href="/getting-started/authentication">
-    API key setup and organization scoping.
+  <Card title="Standard endpoints" icon="list" href="/guides/standard-endpoints">
+    The CRUD and query pattern every resource shares, and the four things that
+    catch people out.
   </Card>
   <Card title="Querying" icon="filter" href="/guides/querying">
-    Pagination, sorting, filtering, search, and joins.
+    Pagination, sorting, filters, search, and joins that resolve names in one
+    request.
+  </Card>
+  <Card title="Archiving and deleting" icon="box-archive" href="/guides/archiving-and-deleting">
+    What archive does, what delete removes, and why you almost always want
+    archive.
+  </Card>
+  <Card title="Timesheets" icon="clock" href="/resources/timesheet">
+    Every hour logged, in one shape. Break carve-out and hour attribution
+    included.
   </Card>
   <Card title="Deliverables" icon="boxes" href="/resources/deliverable">
-    The central work-tree resource and its custom endpoints.
+    The work tree, its nine node types, and the schedule and progress actions.
   </Card>
   <Card title="Domain concepts" icon="git-branch" href="/concepts/overview">
-    Concept-aware endpoints that enforce nesting rules and validation.
+    Deliverable writes with the nesting rules enforced. Prefer these over raw
+    writes.
   </Card>
 </Columns>
+
+## Archiving is not deleting
+
+Worth knowing before your first write. `DELETE` is permanent and cascades, while
+setting `isArchived` is reversible and is what the app itself does. See
+[archiving and deleting](/guides/archiving-and-deleting).

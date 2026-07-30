@@ -1,6 +1,102 @@
 ---
-title: QC inspection set
-description: QC inspection sets.
+title: "QC inspection set"
+description: "Filled-out QC forms and how they came out."
 ---
 
-QC inspection sets. Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+An inspection set is one filled-out QC form: which template version it came from,
+what it was inspected against, and the outcome.
+
+Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+
+## Fields
+
+Every property the API returns for a QC inspection set.
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Unique id. Generated on create unless you supply one. Server-managed. |
+| `organizationId` | UUID | Your organization. Taken from the API key, never from the request body. Read-only. |
+| `templateId` | UUID | QC template version the set was filled from. **Required on create.** |
+| `rootDeliverableId` | UUID \| null | Root order the set belongs to. Set to `null` if that order is ever deleted. |
+| `deliverableId` | UUID \| null | Deliverable the set was inspected against. Set to `null` if that node is ever deleted. |
+| `stageId` | UUID \| null | Station the set was inspected at. Set to `null` if that station is ever deleted. |
+| `projectId` | UUID \| null | Project the set belongs to. Set to `null` if that project is ever deleted. |
+| `phase` | string \| null | Phase name captured when the set was created. |
+| `assignees` | UUID[] | People asked to fill the form. Defaults to empty. |
+| `approvers` | UUID[] | People who can approve the result. Defaults to empty. |
+| `category` | string \| null | Category captured on the set. |
+| `subcategory` | string \| null | Subcategory captured on the set. |
+| `isReworked` | boolean | `true` when the set was detached by a rework. Defaults to `false`. |
+| `triggerKey` | enum \| null | How the set came to exist. `null` on sets created before this field existed. One of `deliverable.reworked` \| `deliverable.put_on_hold` \| `deliverable.due_date_changed` \| `deliverable.manual` \| `deliverable.qc_step`. |
+| `status` | enum | Outcome, derived on every read from the set's inspections. Read-only, and filterable. One of `pending` \| `passed` \| `failed` \| `information` \| `reworked`. |
+| `latestReviewedBy` | UUID \| null | Who reviewed the most recent inspection. Derived on read. Read-only. |
+| `latestCreatedBy` | UUID \| null | Who created the most recent inspection. Derived on read. Read-only. |
+| `createdAt` | date-time | When the record was created. Server-managed. |
+| `updatedAt` | date-time | When the record last changed. Server-managed. |
+
+## Status is derived, and filterable
+
+`status` is computed on every read from the inspections underneath the set, so you
+cannot write it. The precedence is worth knowing:
+
+1. A set detached by rework always reads `reworked`.
+2. Otherwise the most recently touched inspection decides: `failed` if anything
+   failed, `passed` if it passed, `information` for a questions-only record.
+3. An empty set stays `pending`.
+
+Because it is a computed column rather than a stored one, you can still filter and
+group on it:
+
+```http
+GET /qc-inspection-set?status=failed
+```
+
+## Where a set came from
+
+`triggerKey` tells you why the set exists, which matters when you are separating
+inspections someone chose to run from ones the system opened automatically:
+
+| Value | Meaning |
+| ----- | ------- |
+| `deliverable.qc_step` | The routine QC step in a process. |
+| `deliverable.manual` | Someone started the form by hand. |
+| `deliverable.reworked` | Opened automatically when a deliverable was reworked. |
+| `deliverable.put_on_hold` | Opened automatically when a deliverable went on hold. |
+| `deliverable.due_date_changed` | Opened automatically when a due date changed. |
+
+`null` means the set predates the field.
+
+## Links that survive deletion
+
+`rootDeliverableId`, `deliverableId`, `stageId`, and `projectId` are all set to
+`null` if what they point at is ever deleted. The QC record itself is kept, because
+losing the inspection history along with the work is worse than losing the link.
+
+## What you can write
+
+Everything else in the table above is set by BuildingSwell.
+
+| Field | On create | On update |
+| ----- | --------- | --------- |
+| `templateId` | Required | Yes |
+| `rootDeliverableId` | Optional | Yes |
+| `deliverableId` | Optional | Yes |
+| `stageId` | Optional | Yes |
+| `projectId` | Optional | Yes |
+| `phase` | Optional | Yes |
+| `assignees` | Optional | Yes |
+| `approvers` | Optional | Yes |
+| `category` | Optional | Yes |
+| `subcategory` | Optional | Yes |
+| `isReworked` | Optional | Yes |
+| `triggerKey` | Optional | Yes |
+
+## Deleting
+
+<Warning>
+  **`DELETE /qc-inspection-set/{id}` is destructive.**
+
+  Permanently removes the set and the inspections under it, which is your QC record for that work. This cannot be undone and there is no archive for QC sets.
+</Warning>
+
+See [archiving and deleting](/guides/archiving-and-deleting) for the full picture across resources.

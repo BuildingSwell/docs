@@ -1,14 +1,84 @@
 ---
-title: Deliverable dependencies
-description: Dependency links between deliverables.
+title: "Deliverable dependencies"
+description: "Scheduling links between deliverables."
 ---
 
-Dependency links between deliverables. Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+A dependency is a scheduling link between two deliverables in the same tree.
+Creating, changing, or removing one re-rolls the successor's dates.
+
+Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+
+## Fields
+
+Every property the API returns for a dependency.
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Unique id. Generated on create unless you supply one. Server-managed. |
+| `organizationId` | UUID | Your organization. Taken from the API key, never from the request body. Read-only. |
+| `type` | enum | Link type: `fs` finish-to-start, `ff` finish-to-finish, `sf` start-to-finish, `ss` start-to-start. One of `fs` \| `ff` \| `sf` \| `ss`. Defaults to `fs`. |
+| `rootParentId` | UUID | Root of the tree both nodes belong to. **Required on create.** |
+| `fromId` | UUID | Node the link runs from, the predecessor. **Required on create.** |
+| `toId` | UUID | Node the link runs to, the successor. **Required on create.** |
+| `lagTimeSec` | integer | Lag between the two nodes, in seconds. Negative values lead. Defaults to `0`. |
+| `isArchived` | boolean | Archived links no longer affect scheduling. Defaults to `false`. |
+| `archivedAt` | date-time \| null | When the link was archived. Server-managed. |
+| `createdAt` | date-time | When the record was created. Server-managed. |
+| `updatedAt` | date-time | When the record last changed. Server-managed. |
+
+## Link types
+
+`type` follows the usual scheduling conventions. `fs` is the default and covers
+most real work.
+
+| Value | Meaning | Reads as |
+| ----- | ------- | -------- |
+| `fs` | Finish to start | The successor starts after the predecessor finishes. |
+| `ff` | Finish to finish | The two finish together. |
+| `ss` | Start to start | The two start together. |
+| `sf` | Start to finish | The successor finishes after the predecessor starts. |
+
+`lagTimeSec` shifts the link. A positive value delays the successor, for example
+`86400` to hold a phase a day after its predecessor finishes. A negative value
+leads it.
+
+<Note>
+  There is one link per `fromId` and `toId` pair. A duplicate comes back as `409`.
+</Note>
 
 ## Hierarchy
 
-Returns all dependencies in the subtree rooted at `:id`:
+Return every link in the subtree rooted at an id:
 
 ```http
-GET /deliverable/dependencies/:id/hierarchy
+GET /deliverable/dependencies/<id>/hierarchy
 ```
+
+## Reordering instead of writing links
+
+To set a straight sequence under a root, `POST /deliverable/reorder` is easier
+than writing links one at a time. It rewrites the dependency chain to match the
+order you send.
+
+## What you can write
+
+Everything else in the table above is set by BuildingSwell.
+
+| Field | On create | On update |
+| ----- | --------- | --------- |
+| `type` | Optional | Yes |
+| `rootParentId` | Required | Yes |
+| `fromId` | Required | Yes |
+| `toId` | Required | Yes |
+| `lagTimeSec` | Optional | Yes |
+| `isArchived` | Optional | Yes |
+
+## Deleting
+
+<Warning>
+  **`DELETE /deliverable/dependencies/{id}` is destructive.**
+
+  Permanently removes the link. This is not the archive operation and it cannot be undone. The two deliverables stay, and the successor's dates are re-rolled without the link.
+</Warning>
+
+See [archiving and deleting](/guides/archiving-and-deleting) for the full picture across resources.

@@ -1,148 +1,147 @@
 ---
-title: Deliverable
-description: The central work-tree resource — orders, routes, phases, stages, steps, and more.
+title: "Deliverable"
+description: "The work tree: orders, routes, phases, components, stages, steps, and QC steps."
 ---
 
-Central, **generic** resource: one model implements nine domain **concepts** via its `type` field. The raw `deliverable` endpoints below are low-level and do **not** enforce concept rules (valid nesting, required fields, stage linkage, Department scoping). For concept-aware, validated work — and to learn how the concepts fit together — use the [Domain concepts](/concepts/overview) endpoints.
+One generic model carries the whole work tree. A node's `type` decides which
+domain concept it represents, from an order at the top down to a single step.
 
-Hierarchy in brief (see the concepts section for the full grammar): roots are `order`, `route`, `overhead`, `template-phase`; the containers `order`/`phase`/`component` nest freely and hold `stage` nodes; `step` and `qcstep` are leaves under a `stage`.
-
-**Import/Export:** ✓ — see [import and export](/guides/import-export)
 **Search columns:** `name`, `identifier`
 
 Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
 
+<Warning>
+  These raw endpoints do not enforce the concept rules. A `step` under an `order`,
+  or a `stage` node with no station, is accepted here and leaves a tree the app
+  cannot display. For validated writes use the
+  [domain concepts](/concepts/overview) endpoints.
+</Warning>
+
+Hierarchy in brief: the roots are `order`, `route`, `overhead`, and
+`template-phase`. The containers `order`, `phase`, and `component` nest freely and
+hold `stage` nodes. `step` and `qcstep` are leaves under a `stage`.
+
 ## Fields
+
+Every property the API returns for a deliverable.
 
 | Field | Type | Notes |
 | ----- | ---- | ----- |
-| `id` | UUID | Auto-generated |
-| `organizationId` | UUID | From API key |
-| `identifier` | string | Auto-generated |
-| `name` | string | Required |
-| `type` | string | See types below |
-| `quantity` | integer | Default `1` |
-| `parentId` | UUID \| null | Parent deliverable |
-| `rootParentId` | UUID \| null | Root of hierarchy |
-| `originTemplateId` | UUID \| null | Template it was created from |
-| `cycleTimeSec` | integer | Cycle time in seconds |
-| `durationSec` | integer | Duration in seconds |
-| `peopleNum` | integer | Default `1` |
-| `data` | object | Extensible key-value store |
-| `costCode` | string \| null | |
-| `schedule` | object \| null | See below |
-| `progress` | object \| null | See below |
-| `computed` | object | Read-only, see below |
-| `isArchived` | boolean | Default `false` |
-| `createdAt` | date | Auto-generated |
-| `updatedAt` | date | Auto-generated |
+| `id` | UUID | Unique id. Generated on create unless you supply one. Server-managed. |
+| `organizationId` | UUID | Your organization. Taken from the API key, never from the request body. Read-only. |
+| `identifier` | string | Human-readable id, unique within your organization. Generated for you when you leave it out. |
+| `name` | string | Display name. **Required on create.** |
+| `isArchived` | boolean | Archived records are hidden from list results unless you ask for them. Set this to archive or restore the record. Defaults to `false`. |
+| `archivedAt` | date-time \| null | When the record was archived. Set automatically when `isArchived` flips to `true`, and cleared on restore. Server-managed. |
+| `archivedById` | UUID \| null | Who archived the record. Server-managed: a value you send is ignored. |
+| `type` | enum | Which concept this node represents. One of `order` \| `route` \| `overhead` \| `template-phase` \| `phase` \| `component` \| `stage` \| `step` \| `qcstep`. **Required on create.** |
+| `quantity` | integer | How many of this node the work covers. Defaults to `1`. |
+| `parentId` | UUID \| null | Node directly above this one. |
+| `rootParentId` | UUID \| null | Root of this node's tree. A root node points at itself. |
+| `originTemplateId` | UUID \| null | Route or template this node was built from. |
+| `cycleTimeSec` | integer | Cycle time per unit, in seconds. Defaults to `0`. |
+| `durationSec` | integer | Total duration, in seconds. Defaults to `0`. |
+| `peopleNum` | integer | How many people the node is planned for. Defaults to `1`. |
+| `data` | object | Per-concept fields. Which keys apply depends on `type`: a stage node needs `stageId`, an order needs `projectId`, and so on. See the domain concepts guide for the full table. |
+| `costCode` | string \| null | Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`. |
+| `schedule` | object \| null | Scheduled window for the node. Present on `order` nodes only. Read-only. |
+| `progress` | object \| null | Progress for the node. Present on `order` nodes only. Write it through the progress action endpoint rather than by patching this object. Read-only. |
+| `computed` | object | Values BuildingSwell derives from the tree on every read. All read-only: anything you send here is ignored. |
+| `createdAt` | date-time | When the record was created. Server-managed. |
+| `updatedAt` | date-time | When the record last changed. Server-managed. |
 
-## `type` values
+### `type` values
+
+Nine concepts share this one model.
 
 | Value | Role | Description |
 | ----- | ---- | ----------- |
-| `order` | root | Production ticket for a project. The **only** type with `schedule` + `progress`. |
-| `route` | root | Reusable process blueprint, applied onto orders/phases/components. |
-| `overhead` | root | Indirect-labour bucket (leaf); time is tracked via work sessions. |
-| `template-phase` | root | Reusable phase header, applied to a phase (mostly used inside routes). |
-| `phase` | container | Groups work under an order/route/phase/component; may link a route. |
-| `component` | container | Quantity-bearing sub-assembly; same nesting as a phase. |
-| `stage` | work node | A Department work-station. **Must** link a [stage](/resources/stage) via `data.stageId`. |
-| `step` | leaf | A unit of work; **must** be under a `stage`. |
-| `qcstep` | leaf | A QC gate; **must** be under a `stage`; needs `data.qcTemplateId`. |
+| `order` | root | Production ticket for a project. The only type that carries `schedule` and `progress`. |
+| `route` | root | Reusable process blueprint, applied onto orders, phases, and components. |
+| `overhead` | root | Indirect-labour bucket. A leaf, with time tracked through work sessions. |
+| `template-phase` | root | Reusable phase header, mostly used inside routes. |
+| `phase` | container | Groups work under an order, route, phase, or component. May link a route. |
+| `component` | container | Quantity-bearing sub-assembly, nesting the same way a phase does. |
+| `stage` | work node | A department work station. Must link a [stage](/resources/stage) through `data.stageId`. |
+| `step` | leaf | A unit of work. Must sit under a `stage`. |
+| `qcstep` | leaf | A QC gate. Must sit under a `stage`, and needs `data.qcTemplateId`. |
 
-## `schedule` shape
-
-```json
-{
-  "startDate": "2024-03-01T00:00:00.000Z",
-  "endDate": "2024-03-15T00:00:00.000Z"
-}
-```
-
-<Note>
-  This is the shape stored on the record and returned by `GET`. You don't write it directly — it's an effect of the [schedule action endpoints](#schedule-a-deliverable) below, whose request bodies use a different shape (an action union with epoch-second times, not `startDate`/`endDate`).
-</Note>
-
-## `progress` shape
-
-```json
-{
-  "status": "wip",
-  "completed": 10,
-  "wip": 5,
-  "percentage": 60,
-  "startedAt": "2024-03-01T08:00:00.000Z",
-  "completedAt": null,
-  "hasBeenReworked": false,
-  "updatedById": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "updatedAt": "2024-03-02T10:00:00.000Z"
-}
-```
-
-Status values: `waiting` | `todo` | `wip` | `rework` | `on-hold` | `done`
+### `schedule`
 
 | Field | Type | Notes |
 | ----- | ---- | ----- |
-| `status` | string | Current progress status |
-| `completed` | number | Completed quantity |
-| `wip` | number | Work-in-progress quantity |
-| `percentage` | number | Completion percentage (0–100) |
-| `startedAt` | date \| null | When work first started |
-| `completedAt` | date \| null | When the deliverable reached `done` |
-| `hasBeenReworked` | boolean | `true` if the deliverable has ever been set to `rework` status. Immutable once set to `true`. |
-| `updatedById` | UUID \| null | ID of the user who last updated progress (auto-populated; `null` for `waiting` transitions) |
-| `updatedAt` | date \| null | Timestamp of the last progress update (auto-populated; `null` for `waiting` transitions) |
+| `startDate` | date-time | Scheduled start. |
+| `endDate` | date-time | Scheduled finish. |
 
 <Note>
-  `hasBeenReworked`, `updatedById`, and `updatedAt` are server-managed — you do not need to supply them. `hasBeenReworked` is set automatically to `true` when a deliverable enters `rework` status and stays `true` even after the status subsequently changes.
+  This is the stored shape, returned by `GET`. You do not write it directly: it is the result of the schedule action endpoints, whose request bodies use a different shape with epoch-second times.
 </Note>
 
-## `computed` shape (read-only)
+### `progress`
 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `rootType` | string \| null | `type` of the root deliverable in the hierarchy |
-| `fullName` | string[] | Name breadcrumb from root |
-| `fullPath` | string[] | ID breadcrumb from root |
-| `shopId` | UUID \| null | Resolved shop |
-| `phasesPath` | string[] | Phase names in ancestry |
-| `phase` | string \| null | Nearest phase name |
-| `currentChildren` | object[] | Direct children summary |
-| `containedStageIds` | UUID[] | All stage IDs anywhere under this node |
-| `containedPhaseNames` | string[] | All phase names anywhere under this node |
-| `currentStageIds` | UUID[] | Stage IDs on the node's current (active) work frontier; filter with `jinco` |
-| `currentPhaseNames` | string[] | Phase names on the current work frontier |
-| `combinedWorkerIds` | UUID[] | All worker IDs assigned anywhere under this node |
-| `combinedTagIds` | string[] | All tag IDs anywhere under this node |
-| `isLeaf` | boolean | `true` if no children |
-| `workerIds` | UUID[] | Workers directly assigned to this deliverable |
-| `tags` | string[] | Tags on this deliverable |
-| `projectId` | UUID \| null | Project this belongs to |
-| `date` | string \| null | Effective date |
-| `isAtRisk` | boolean | |
-| `isLate` | boolean | |
-| `effectiveDueDate` | string \| null | |
-| `effectiveDueDateIsInherited` | boolean | |
-| `effectiveDueDateIsLate` | boolean | |
-| `alertType` | `on-hold` \| `late` \| `at-risk` \| `no-risk` | Highest-priority alert state |
-| `alertTypeOrdinal` | integer | Numeric ordinal for `alertType` (0 = no-risk, 1 = at-risk, 2 = late, 3 = on-hold) |
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `status` | enum | Where the work stands right now. One of `waiting` \| `todo` \| `wip` \| `rework` \| `on-hold` \| `done`. |
+| `completed` | number | Quantity finished. Defaults to `0`. |
+| `wip` | number | Quantity in progress. Defaults to `0`. |
+| `percentage` | number | Percent complete, 0 to 100. Defaults to `0`. |
+| `startedAt` | date-time \| null | When work first started. |
+| `completedAt` | date-time \| null | When the node reached `done`. |
+| `hasBeenReworked` | boolean | `true` once the node has ever been set to `rework`. Server-managed, and it stays `true` after the status changes again. Defaults to `false`. |
+| `updatedById` | UUID \| null | Who last changed progress. Server-managed, and `null` for transitions into `waiting`. |
+| `updatedAt` | date-time \| null | When progress last changed. Server-managed, and `null` for transitions into `waiting`. |
+
+<Note>
+  `hasBeenReworked`, `updatedById`, and `updatedAt` are server-managed. `hasBeenReworked` flips to `true` the first time a node enters `rework` and stays `true` afterwards, so it tells you whether rework ever happened rather than whether it is happening now.
+</Note>
+
+### `computed`
+
+All read-only. BuildingSwell derives these from the tree on every read, so anything you send is ignored.
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `rootType` | enum \| null | `type` of the root node of this tree. One of `order` \| `route` \| `overhead` \| `template-phase` \| `phase` \| `component` \| `stage` \| `step` \| `qcstep`. |
+| `fullName` | string[] | Name breadcrumb from the root down to this node. |
+| `fullPath` | UUID[] | Id breadcrumb from the root down to this node. |
+| `shopId` | UUID \| null | Department that applies to this node, inherited from the nearest ancestor when the node does not set one. `null` means cross-department. |
+| `phasesPath` | string[] | Phase names in this node's ancestry. |
+| `phase` | string \| null | Nearest phase name above this node. |
+| `currentChildren` | object[] | Summary of the node's direct children. |
+| `containedStageIds` | (UUID \| null)[] | Every station anywhere beneath this node. |
+| `containedPhaseNames` | string[] | Every phase name anywhere beneath this node. |
+| `containedCurrentStageIds` | (UUID \| null)[] | Stations beneath this node that sit on the active work frontier. |
+| `containedCurrentPhaseNames` | string[] | Phase names beneath this node that sit on the active work frontier. |
+| `currentStageIds` | UUID[] | Stations on this node's own active work frontier. Filter it with the `jinco` operator. |
+| `currentPhaseNames` | string[] | Phase names on this node's own active work frontier. |
+| `combinedWorkerIds` | UUID[] | Everyone assigned anywhere beneath this node. |
+| `combinedTagIds` | string[] | Every tag anywhere beneath this node. |
+| `workerIds` | UUID[] | People assigned directly to this node. |
+| `tags` | string[] | Tags on this node itself. |
+| `isLeaf` | boolean | `true` when the node has no children. Defaults to `true`. |
+| `projectId` | UUID \| null | Project this tree belongs to. |
+| `date` | string \| null | Effective date for the node. |
+| `isAtRisk` | boolean | `true` when the node is trending late. Defaults to `false`. |
+| `isLate` | boolean | `true` when the node has missed its date. Defaults to `false`. |
+| `effectiveDueDate` | string \| null | Due date that applies, whether set here or inherited. |
+| `effectiveDueDateIsInherited` | boolean | `true` when the due date comes from an ancestor. Defaults to `false`. |
+| `effectiveDueDateIsLate` | boolean | `true` when the effective due date has passed. Defaults to `false`. |
+| `hasReworkedStages` | boolean | `true` when any stage beneath this node has been reworked. Defaults to `false`. |
+| `alertType` | enum | Highest-priority alert state for the node. One of `on-hold` \| `late` \| `at-risk` \| `no-risk`. |
+| `alertTypeOrdinal` | integer | `alertType` as a sortable number: 0 no-risk, 1 at-risk, 2 late, 3 on-hold. |
 
 ## Extra endpoints
 
-### Hierarchy
-
-Returns all deliverables in the subtree:
+### Read a whole subtree
 
 ```http
-GET /deliverable/:id/hierarchy
+GET /deliverable/<id>/hierarchy
 ```
 
-Response: `{ "values": Deliverable[], "totalCount": number }`
+Returns `{ "values": Deliverable[], "totalCount": number }` with the node and every
+node beneath it.
 
-### Groups
-
-Group deliverables by a semantic dimension:
+### Group by a domain dimension
 
 ```http
 POST /deliverable/groups
@@ -150,11 +149,11 @@ POST /deliverable/groups
 { "groupBy": "project" }
 ```
 
-`groupBy` values: `project` | `stage` | `people` | `root` | `tags`
+`groupBy` takes `project`, `stage`, `people`, `root`, or `tags`. Use this when you
+want counts by something the model does not store as a plain column;
+`POST /deliverable/group-and-count` covers raw columns.
 
-### Reorder
-
-Set dependency order under a root:
+### Reorder under a root
 
 ```http
 POST /deliverable/reorder
@@ -165,44 +164,55 @@ POST /deliverable/reorder
 }
 ```
 
-Response: `204 No Content`
+The list becomes the new sequence, and the dependency links are rewritten to match.
+Responds `204` with no body.
 
 ### Crew time
 
 ```http
-GET /deliverable/crew-time?deliverableId=<uuid>
+POST /deliverable/crew-time
+
+{ "deliverableId": ["<uuid>"], "breakdown": false }
 ```
 
-Response: `{ "<deliverableId>": { ... } }`
+Returns a map keyed by deliverable id. Set `breakdown` to split the totals out per
+person and station.
 
-### Schedule a deliverable
+<Warning>
+  `GET /deliverable/crew-time` is deprecated. Repeating `deliverableId` in the
+  query string exceeds URL length limits once you ask about many orders at once.
+  Use the `POST` form above.
+</Warning>
 
-The body is an **action union** (`type` discriminates the shape), not `{startDate, endDate}`. Times are epoch **seconds** (`newStart` / `newFinish`), not ISO strings — only one of the two is required per call, the engine derives the other from duration/dependencies.
+### Schedule a node
 
 ```http
-POST /deliverable/root/:rootId/schedule/:id
+POST /deliverable/root/<rootId>/schedule/<id>
 ```
 
+The body is an **action union** keyed on `type`, not `{ startDate, endDate }`.
+Times are epoch **seconds**, and you send only one of `newStart` or `newFinish`:
+the engine derives the other from duration and dependencies.
+
 ```json
-// type: "schedule" — initial placement
-{ "type": "schedule", "newStart": 1709251200 }
+// Initial placement
+{ "type": "schedule", "newStart": 1772323200 }
 
-// type: "drag" — move without changing duration
-{ "type": "drag", "newFinish": 1710460800 }
+// Move without changing duration
+{ "type": "drag", "newFinish": 1773532800 }
 
-// type: "shrink" / "expand" — change duration, anchored at start or finish
-{ "type": "shrink", "newDuration": 604800, "newStart": 1709251200 }
-{ "type": "expand", "newDuration": 1814400, "newFinish": 1710460800 }
+// Change duration, anchored at start or finish
+{ "type": "shrink", "newDuration": 604800, "newStart": 1772323200 }
+{ "type": "expand", "newDuration": 1814400, "newFinish": 1773532800 }
 
-// type: "reschedule" — recompute from dependencies, no extra fields
+// Recompute from dependencies
 { "type": "reschedule" }
 ```
 
-Response: `204 No Content` — re-fetch the deliverable (`GET /deliverable/:id`) to see the resulting `schedule`.
+Responds `204` with no body. Re-read the node with `GET /deliverable/{id}` to see
+the resulting `schedule`.
 
-### Batch schedule
-
-Same action union as above, wrapped with `rootParentId`/`targetId` per item:
+### Schedule in a batch
 
 ```http
 POST /deliverable/schedule/batch
@@ -211,40 +221,105 @@ POST /deliverable/schedule/batch
   {
     "rootParentId": "<uuid>",
     "targetId": "<uuid>",
-    "action": { "type": "drag", "newStart": 1709251200 }
+    "action": { "type": "drag", "newStart": 1772323200 }
   }
 ]
 ```
 
-Response: `204 No Content`.
+Same action union, wrapped per item. Responds `204` with no body.
 
 ### Update progress
 
-The body is an **action union** (`type` discriminates the shape), not `{status, completed, wip}`:
-
 ```http
-POST /deliverable/root/:rootId/progress/:id
+POST /deliverable/root/<rootId>/progress/<id>
 ```
 
+Another action union, rather than a patch of the `progress` object:
+
 ```json
-// type: "complete" — no extra fields
 { "type": "complete" }
-
-// type: "uncomplete" — revert a completed quantity back to wip
 { "type": "uncomplete", "quantity": 5 }
-
-// type: "send-ahead" — partially complete ahead of dependencies
 { "type": "send-ahead", "quantity": 3 }
-
-// type: "rework" — no extra fields
 { "type": "rework" }
-
-// type: "put-on-hold" / "resume-work" — no extra fields
 { "type": "put-on-hold" }
 { "type": "resume-work" }
-
-// type: "set-percentage" — not allowed on qcstep nodes
 { "type": "set-percentage", "percentage": 60 }
 ```
 
-Response: `200` with `{ "kickedWorkers": [...] }` — the IDs of any workers whose in-progress work sessions/plans were stopped because their deliverable reached `done`. It does **not** return the updated deliverable; re-fetch it separately if you need the new `progress`.
+`set-percentage` is not allowed on `qcstep` nodes.
+
+Responds `200` with `{ "kickedWorkers": [...] }`, the ids of anyone whose open work
+sessions and daily-plan assignments were stopped because their deliverable reached
+`done`. It does not return the updated node, so re-read it if you need the new
+`progress`.
+
+<Tip>
+  To show someone the consequences of a destructive action such as `rework` before
+  committing, call
+  [`POST /concepts/root/{rootId}/progress/{id}/plan`](/concepts/overview) first. It
+  computes the effect and writes nothing.
+</Tip>
+
+## What you can write
+
+Everything else in the table above is set by BuildingSwell.
+
+| Field | On create | On update |
+| ----- | --------- | --------- |
+| `identifier` | Optional | Yes |
+| `name` | Required | Yes |
+| `isArchived` | Optional | Yes |
+| `type` | Required | Yes |
+| `quantity` | Optional | Yes |
+| `parentId` | Optional | Yes |
+| `rootParentId` | Optional | Yes |
+| `originTemplateId` | Optional | Yes |
+| `cycleTimeSec` | Optional | Yes |
+| `durationSec` | Optional | Yes |
+| `peopleNum` | Optional | Yes |
+| `data` | Optional | Yes |
+| `costCode` | Optional | Yes |
+
+## Archive and restore
+
+There is no separate archive endpoint. Flip `isArchived` with a `PATCH`, and BuildingSwell handles the rest.
+
+```bash
+# Archive
+PATCH /deliverable/<id>
+{ "isArchived": true }
+
+# Restore
+PATCH /deliverable/<id>
+{ "isArchived": false }
+```
+
+When you archive:
+
+- `identifier` gets an ` - (archived <timestamp>)` suffix, where `<timestamp>` is the archive time in epoch milliseconds. Match it with a pattern, not a literal string.
+- `archivedAt` is stamped with the current time.
+- Archiving cascades to every node beneath the one you archive, and then re-rolls the parent's times and progress, because removing the last incomplete step can make a stage `done`. Restoring cascades the same way and re-rolls again.
+
+When you restore, the suffix comes off, and a colliding identifier is given the next free variant.
+
+Archived records drop out of list results by default. Ask for them with an explicit filter:
+
+```http
+GET /deliverable?isArchived=true
+```
+
+## Deleting
+
+<Warning>
+  **`DELETE /deliverable/{id}` is destructive.**
+
+  Permanently removes the node **and every node beneath it**. This is not the archive operation and it cannot be undone. Prefer `PATCH /deliverable/{id}` with `{ "isArchived": true }`, which cascades the same way and is reversible.
+
+  Before the rows go, BuildingSwell relinks what pointed at them so you do not silently lose time or QC history:
+
+  - Work sessions and QC entries on any deleted node are moved onto the nearest surviving ancestor.
+- Dependency links touching any deleted node are removed with it.
+- When there is no surviving ancestor, which is the case when you delete a root order, the call is rejected with `400` if the subtree has work sessions or QC entries. Archive it instead.
+</Warning>
+
+See [archiving and deleting](/guides/archiving-and-deleting) for the full picture across resources.

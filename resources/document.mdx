@@ -1,6 +1,68 @@
 ---
-title: Document
-description: Documents attached to deliverables.
+title: "Document"
+description: "Files attached to orders and their deliverables."
 ---
 
-Documents attached to deliverables. Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+A document is a file attached to an order. It can also be scoped to one
+deliverable underneath that order.
+
+Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+
+## Fields
+
+Every property the API returns for a document.
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Unique id. Generated on create unless you supply one. Server-managed. |
+| `organizationId` | UUID | Your organization. Taken from the API key, never from the request body. Read-only. |
+| `orderId` | UUID | Order the document hangs off. **Required on create.** |
+| `name` | string | File name shown to readers. **Required on create.** |
+| `appUserId` | UUID \| null | Who uploaded the document. |
+| `documentUrl` | string \| null | Time-limited download link, generated on read. Do not store it. |
+| `documentKey` | string \| null | Storage key for the file. |
+| `deliverableDocument` | boolean | `true` when the document is scoped to a specific deliverable rather than the whole order. |
+| `copyWithDeliverable` | boolean | `true` to copy the document along when its deliverable is copied. |
+| `lastModifiedAt` | date-time \| null | When the underlying file last changed. |
+| `createdAt` | date-time | When the record was created. Server-managed. |
+| `updatedAt` | date-time | When the record last changed. Server-managed. |
+
+## Scoping and copying
+
+Two booleans control how a document behaves inside the work tree:
+
+- `deliverableDocument` marks the file as belonging to one deliverable rather than
+  the whole order.
+- `copyWithDeliverable` carries the file along when its deliverable is copied, for
+  example when a route is applied and its structure is instantiated.
+
+## Download links
+
+`documentKey` is the durable storage key. `documentUrl` is a time-limited link
+generated when you read the record, so it expires: store the `key` and re-read the
+document when you need a fresh link.
+
+## What you can write
+
+Everything else in the table above is set by BuildingSwell.
+
+| Field | On create | On update |
+| ----- | --------- | --------- |
+| `orderId` | Required | Yes |
+| `name` | Required | Yes |
+| `appUserId` | Optional | Yes |
+| `documentUrl` | Optional | Yes |
+| `documentKey` | Optional | Yes |
+| `deliverableDocument` | Optional | Yes |
+| `copyWithDeliverable` | Optional | Yes |
+| `lastModifiedAt` | Optional | Yes |
+
+## Deleting
+
+<Warning>
+  **`DELETE /document/{id}` is destructive.**
+
+  Permanently removes the document record. This cannot be undone and there is no archive for documents.
+</Warning>
+
+See [archiving and deleting](/guides/archiving-and-deleting) for the full picture across resources.

@@ -1,9 +1,11 @@
 ---
-title: Response format
-description: Response shapes and error format for the BuildingSwell v2 API.
+title: "Response format"
+description: "Response shapes, status codes, and the error body."
 ---
 
 ## Success responses
+
+Reads and writes come back wrapped, so you always know where to look for the data.
 
 | Operation | Shape |
 | --------- | ----- |
@@ -13,24 +15,65 @@ description: Response shapes and error format for the BuildingSwell v2 API.
 | Create many | `{ "values": [...] }` |
 | Update | `{ "value": { ... } }` |
 | Count | `{ "count": number }` |
-| Group & count | `{ "values": [{ "groupId": any, "count": number }], "hasMore": boolean }` |
+| Group and count | `{ "values": [{ "groupId": any, "count": number }], "hasMore": boolean }` |
+
+`POST` with a single object returns `value`. `POST` with an array returns `values`.
+Send an array of one if you want the shape to stay predictable across batch sizes.
+
+Several write endpoints return `204` with no body at all: the schedule and progress
+actions, reorder, work-session save and stop, and the user deactivate, reactivate,
+and invite-resend calls. Re-read the record when you need its new state.
 
 ## Errors
+
+Every error carries the same envelope.
 
 ```json
 {
   "error": {
-    "message": "Description of what went wrong",
-    "missingPermissions": ["permission.name"]
-  }
+    "message": "Validation failed",
+    "code": "VALIDATION",
+    "requestId": "b0f4c8e2-1f3a-4c19-9d6e-7c8b2a5f1e40",
+    "details": [
+      { "path": "data.stageId", "message": "Required", "code": "invalid_type" }
+    ],
+    "missingPermissions": ["worker.create"]
+  },
+  "context": {}
 }
 ```
 
-| Status | Meaning |
-| ------ | ------- |
-| `400` | Bad request |
-| `401` | Missing or invalid API key |
-| `403` | Insufficient permissions |
-| `404` | Not found |
-| `409` | Business logic conflict |
-| `500` | Server error |
+| Field | When it appears | What it is for |
+| ----- | --------------- | -------------- |
+| `error.message` | Always | Plain-language description. Show it, but do not branch on it. |
+| `error.code` | Always | Stable machine-readable code. **Branch on this.** |
+| `error.requestId` | Always | Id for the request. Log it, and quote it when you contact support. |
+| `error.details` | Validation failures | One entry per field at fault, with a `path` you can map back to your payload. |
+| `error.missingPermissions` | `403` | Which permissions your key is short of. |
+| `context` | Always | Extra context for the error. Usually empty. |
+
+<Note>
+  `message` wording can change without notice. `code` will not, so write your error
+  handling against `code` and keep `message` for humans.
+</Note>
+
+### Error codes
+
+| Code | Status | Meaning |
+| ---- | ------ | ------- |
+| `BAD_REQUEST` | `400` | The request was malformed. |
+| `VALIDATION` | `400` | The body failed validation. Read `details`. |
+| `UNAUTHORIZED` | `401` | The `X-API-Key` header is missing or the key is invalid. |
+| `FORBIDDEN` | `403` | Your key lacks the permission. Read `missingPermissions`. |
+| `NOT_FOUND` | `404` | No such record in your organization. |
+| `CONFLICT` | `409` | The write conflicts with a business rule. |
+| `UNIQUE_VIOLATION` | `409` | A record with those unique values already exists. |
+| `FK_VIOLATION` | `409` | A related record blocks the write. Common on deletes, see [archiving and deleting](/guides/archiving-and-deleting). |
+| `RATE_LIMITED` | `429` | Too many requests. See [rate limits](/getting-started/rate-limits). |
+| `INTERNAL` | `500` | Something failed on our side. Retry, and send us the `requestId` if it keeps happening. |
+
+<Warning>
+  A `429` also carries a top-level `message` alongside `error`, kept for callers
+  written against the older shape. Read `error.code` rather than the top-level
+  field.
+</Warning>
