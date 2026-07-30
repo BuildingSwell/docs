@@ -72,11 +72,25 @@ archive them with `PATCH /bulk`. See
 
 ### Archived records are hidden by default
 
-List and count endpoints filter to `isArchived eq false` unless you say otherwise:
+Reads filter to `isArchived eq false` unless you say otherwise:
 
 ```http
 GET /project?isArchived=true
 ```
+
+This applies to single-record reads too, which is the part that surprises people:
+`GET /project/{id}` on an archived record returns `404`, and there is no query
+parameter that changes it on that route. When an id might belong to an archived
+record, read it through the list endpoint instead, where the filter is yours to
+set:
+
+```http
+GET /project?id=<uuid>&isArchived=true&isArchived=false
+```
+
+Repeating `isArchived` matches either value, so that request returns the record
+whether it is archived or not. See
+[archiving and deleting](/guides/archiving-and-deleting).
 
 ## Creating one record or many
 

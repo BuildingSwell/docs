@@ -98,12 +98,24 @@ GET /worker
 GET /worker?isArchived=true
 ```
 
-An explicit `isArchived` replaces the default instead of adding to it, so one request returns active or archived people, never both. Reading an archived person by id needs the flag too: a plain `GET /worker/{id}` on an archived person comes back `404`, so resolve them through the list endpoint with `?isArchived=true`.
+Repeat the parameter when you want both at once:
+
+```http
+# Active and archived together
+GET /worker?isArchived=true&isArchived=false
+```
+
+<Warning>
+  `GET /worker/{id}` on an archived person returns `404`, and no query parameter
+  overrides that on the by-id route. Since a `workerId` on an old timesheet may
+  well belong to an archived person, resolve ids through the list endpoint:
+  `GET /worker?id=<uuid>&isArchived=true&isArchived=false`.
+</Warning>
 
 ## Deleting
 
 <Info>
-  People are never deleted. Both `DELETE /worker/{id}` and `DELETE /worker/bulk` return `403`, so historical `workerId` values on timesheets and QC entries always resolve.
+  People are never deleted. Both `DELETE /worker/{id}` and `DELETE /worker/bulk` return `403`, so a historical `workerId` on a timesheet or QC entry never dangles. It still has to be read the way the warning above describes once the person is archived.
 
   Archive instead: `PATCH /worker/{id}` with `{ "isArchived": true }`.
 </Info>
@@ -113,17 +125,12 @@ See [archiving and deleting](/guides/archiving-and-deleting) for how this compar
 ## Common requests
 
 ```bash
-# Build an id -> name map. Two calls: archived people are excluded by default,
-# and you need them too if old ids are to resolve.
-GET /worker
-GET /worker?isArchived=true
+# Build an id -> name map, archived people included so old ids still resolve
+GET /worker?isArchived=true&isArchived=false
 
 # Resolve a specific set of ids, archived people included
 POST /worker/query
-{ "id": ["<uuid>", "<uuid>"], "select": ["id", "name"] }
-
-POST /worker/query
-{ "id": ["<uuid>", "<uuid>"], "isArchived": true, "select": ["id", "name"] }
+{ "id": ["<uuid>", "<uuid>"], "isArchived": [true, false], "select": ["id", "name"] }
 
 # Only people currently on the roster
 GET /worker?status=active
