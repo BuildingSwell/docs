@@ -3,13 +3,8 @@ title: "Rate limits"
 description: "Request limits, the headers that report them, and how to back off."
 ---
 
-| Endpoints | Limit |
-| --------- | ----- |
-| Everything | 3,000 requests per 60 seconds |
-| `POST /*/import` | 100 requests per 60 seconds |
-
-The import limit is separate and stricter, because an import can write thousands of
-rows per request.
+Every endpoint shares one limit: **3,000 requests per 60 seconds**, counted per API
+key.
 
 ## Headers
 
@@ -55,5 +50,7 @@ fix that:
   table or send one `POST /worker/query` with every id you need. See
   [querying](/guides/querying).
 
-For a nightly sync, `GET /deliverable/export` moves up to 10,000 rows in a single
-request. See [import and export](/guides/import-export).
+For writes, the bulk endpoints do the same thing in reverse. One
+`PATCH /deliverable/bulk` updates every matching record, and one
+`PUT /deliverable/bulk` upserts a whole batch. See
+[standard endpoints](/guides/standard-endpoints).

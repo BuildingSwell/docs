@@ -72,8 +72,7 @@
               "guides/querying",
               "guides/response-format",
               "guides/archiving-and-deleting",
-              "guides/group-and-count",
-              "guides/import-export"
+              "guides/group-and-count"
             ]
           },
           {
@@ -87,8 +86,6 @@
               "resources/deliverable-work-sessions",
               "resources/comment",
               "resources/document",
-              "resources/note",
-              "resources/notification",
               "resources/qc-inspection-set",
               "resources/qc-template",
               "resources/timesheet",
@@ -181,11 +178,7 @@
               "POST /deliverable/archive/batch",
               "GET /deliverable/crew-time",
               "POST /deliverable/crew-time",
-              "GET /deliverable/export",
-              "GET /deliverable/export/json",
               "POST /deliverable/groups",
-              "POST /deliverable/import",
-              "POST /deliverable/import/json",
               "POST /deliverable/reorder",
               "POST /deliverable/restore/batch",
               "POST /deliverable/root/{rootId}/progress/{id}",
@@ -212,7 +205,6 @@
               "PUT /deliverable/work-sessions/bulk",
               "DELETE /deliverable/work-sessions/bulk",
               "POST /deliverable/work-sessions/error-ids",
-              "GET /deliverable/work-sessions/export",
               "POST /deliverable/work-sessions/save",
               "POST /deliverable/work-sessions/stop"
             ]
@@ -276,40 +268,6 @@
             ]
           },
           {
-            "group": "Notes",
-            "openapi": "openapi.yaml",
-            "pages": [
-              "GET /note",
-              "POST /note",
-              "GET /note/{id}",
-              "PATCH /note/{id}",
-              "PUT /note/{id}",
-              "DELETE /note/{id}",
-              "GET /note/count",
-              "POST /note/count",
-              "POST /note/query",
-              "POST /note/group-and-count",
-              "PATCH /note/bulk",
-              "PUT /note/bulk",
-              "DELETE /note/bulk",
-              "PUT /note/by-deliverable"
-            ]
-          },
-          {
-            "group": "Notifications",
-            "openapi": "openapi.yaml",
-            "pages": [
-              "GET /notification",
-              "GET /notification/{id}",
-              "GET /notification/count",
-              "POST /notification/count",
-              "POST /notification/query",
-              "POST /notification/group-and-count",
-              "POST /notification/read-channel-comments",
-              "POST /notification/read-deliverable-documents"
-            ]
-          },
-          {
             "group": "QC",
             "openapi": "openapi.yaml",
             "pages": [
@@ -367,7 +325,7 @@
             ]
           },
           {
-            "group": "Organization",
+            "group": "Roles",
             "openapi": "openapi.yaml",
             "pages": [
               "GET /role",
@@ -383,7 +341,13 @@
               "PATCH /role/bulk",
               "PUT /role/bulk",
               "DELETE /role/bulk",
-              "POST /role/{id}/duplicate",
+              "POST /role/{id}/duplicate"
+            ]
+          },
+          {
+            "group": "Users",
+            "openapi": "openapi.yaml",
+            "pages": [
               "GET /organization-member",
               "POST /organization-member",
               "GET /organization-member/{id}",
@@ -397,8 +361,6 @@
               "PATCH /organization-member/bulk",
               "PUT /organization-member/bulk",
               "DELETE /organization-member/bulk",
-              "GET /organization-member/export",
-              "POST /organization-member/import",
               "PATCH /organization-member/{id}/deactivate",
               "POST /organization-member/{id}/invite/resend",
               "PATCH /organization-member/{id}/reactivate"

@@ -13,8 +13,7 @@ Base URL:
 https://app.buildingswell.com/api/v2
 ```
 
-Responses are `application/json`. File imports are `multipart/form-data`, and file
-exports come back as `.xlsx`.
+Every request and response is `application/json`.
 
 ## Quick start
 
@@ -70,11 +69,8 @@ exports come back as `.xlsx`.
   </Card>
 </Columns>
 
-## Two things worth knowing up front
+## Archiving is not deleting
 
-**Archiving is not deleting.** `DELETE` is permanent and cascades. Setting
-`isArchived` is reversible and is what the app does. See
+Worth knowing before your first write. `DELETE` is permanent and cascades, while
+setting `isArchived` is reversible and is what the app itself does. See
 [archiving and deleting](/guides/archiving-and-deleting).
-
-**Imports answer `200` even when rows fail.** Read the `errors` array rather than
-trusting the status code. See [import and export](/guides/import-export).

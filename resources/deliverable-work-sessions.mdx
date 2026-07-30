@@ -149,13 +149,7 @@ duration instead of writing negative time.
 `POST /deliverable/work-sessions/error-ids` returns the ids of sessions that
 overlap another session for the same person, or that run past the shift they belong
 to. It takes the same filters as the list endpoint, in the body, so you can check a
-whole pay period before exporting it.
-
-## Export
-
-`GET /deliverable/work-sessions/export` returns an `.xlsx` file with hours and
-break time already worked out per row. There is no matching import: sessions are
-derived rows, so `POST /deliverable/work-sessions/import` is rejected.
+whole pay period in one call before you trust the hours in it.
 
 ## What you can write
 

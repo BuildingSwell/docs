@@ -88,7 +88,7 @@ curl -X POST "https://app.buildingswell.com/api/v2/deliverable/work-sessions/err
 ```
 
 Returns the ids of overlapping and over-shift sessions, so you can clean a period up
-before exporting it.
+before you run payroll off it.
 
 ### Check what an external system has not picked up
 
@@ -195,25 +195,3 @@ curl -X POST "https://app.buildingswell.com/api/v2/concepts/root/<orderId>/progr
 ```
 
 Nothing is written, so you can show someone the effect first.
-
-## Files
-
-### Export to Excel
-
-```bash
-curl "https://app.buildingswell.com/api/v2/deliverable/export?isArchived:eq=false" \
-  -H "X-API-Key: <key>" \
-  -o deliverables.xlsx
-```
-
-### Import from Excel
-
-```bash
-curl -X POST "https://app.buildingswell.com/api/v2/deliverable/import" \
-  -H "X-API-Key: <key>" \
-  -F "file=@deliverables.xlsx" \
-  -F "timezone=America/New_York"
-```
-
-Read the `errors` array in the response. A `200` means the file was processed, not
-that every row landed.

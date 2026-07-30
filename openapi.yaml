@@ -40,18 +40,16 @@ tags:
   description: Messages on a deliverable channel.
 - name: Documents
   description: Files attached to orders.
-- name: Notes
-  description: One rich-text note per deliverable.
-- name: Notifications
-  description: Notifications for the user behind your API key.
 - name: QC
   description: QC templates and the inspection sets filled from them.
 - name: People (Workers)
   description: Your workforce roster. Called People in the app and `worker` in the API.
 - name: Timesheets
   description: Read-only view over attendance and work sessions.
-- name: Organization
-  description: Roles, and the users who carry them.
+- name: Roles
+  description: Permission roles, and the statements that make them up.
+- name: Users
+  description: People with a BuildingSwell login. Called Users in the app and `organization-member` in the API.
 - name: Concepts
   description: Deliverable writes with the nesting rules enforced.
 paths:
@@ -1605,139 +1603,6 @@ paths:
           $ref: '#/components/responses/Conflict'
         '429':
           $ref: '#/components/responses/RateLimited'
-  /deliverable/export:
-    get:
-      tags:
-      - Deliverables
-      summary: Export deliverables to Excel
-      description: |-
-        Download deliverables as an `.xlsx` file, up to 10,000 rows. Takes the same filters as `GET /deliverable`.
-      parameters:
-      - $ref: '#/components/parameters/filter'
-      - $ref: '#/components/parameters/timezone'
-      responses:
-        '200':
-          description: The workbook.
-          content:
-            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
-              schema:
-                type: string
-                format: binary
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /deliverable/import:
-    post:
-      tags:
-      - Deliverables
-      summary: Import deliverables from Excel
-      description: |-
-        Upload an `.xlsx` file of deliverables. Maximum 10 MB.
-
-        Row and file problems come back as `200` with details in the body, so a `200` does not mean everything imported. Read `errors` before treating the run as clean. The one failure that is not a `200` is a file the server cannot open at all, which surfaces as `500`.
-
-        Rate limited to 100 requests per minute.
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-              - file
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: The `.xlsx` file.
-                timezone:
-                  type: string
-                  description: IANA timezone for reading dates in the file. Defaults to UTC.
-      responses:
-        '200':
-          description: What was imported, and what was not.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ImportResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /deliverable/export/json:
-    get:
-      tags:
-      - Deliverables
-      summary: Export deliverables to JSON
-      description: |-
-        Download deliverables as JSON rather than a workbook. Same filters and same 10,000-row ceiling as the Excel export.
-      parameters:
-      - $ref: '#/components/parameters/filter'
-      - $ref: '#/components/parameters/timezone'
-      responses:
-        '200':
-          description: The exported rows.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeliverableMultiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /deliverable/import/json:
-    post:
-      tags:
-      - Deliverables
-      summary: Import deliverables from JSON
-      description: |-
-        Upsert deliverables from a JSON array, keyed on `identifier`. Same reporting shape as the Excel import: problems come back as `200` with details in the body.
-
-        Rate limited to 100 requests per minute.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/DeliverableCreate'
-      responses:
-        '200':
-          description: What was imported, and what was not.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ImportResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
   /deliverable/work-sessions:
     get:
       tags:
@@ -2261,36 +2126,6 @@ paths:
                       format: uuid
                       description: Session id.
                     description: Sessions whose worked time exceeds the shift's available time.
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /deliverable/work-sessions/export:
-    get:
-      tags:
-      - Work sessions
-      summary: Export work sessions to Excel
-      description: |-
-        Download work sessions as an `.xlsx` file, with hours and break time already worked out per row. Takes the same filters as the list endpoint.
-
-        There is no matching import: sessions are derived rows, so `POST /deliverable/work-sessions/import` is rejected.
-      parameters:
-      - $ref: '#/components/parameters/filter'
-      - $ref: '#/components/parameters/timezone'
-      responses:
-        '200':
-          description: The workbook.
-          content:
-            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
-              schema:
-                type: string
-                format: binary
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -3418,654 +3253,6 @@ paths:
           $ref: '#/components/responses/Conflict'
         '429':
           $ref: '#/components/responses/RateLimited'
-  /note:
-    get:
-      tags:
-      - Notes
-      summary: List notes
-      description: |-
-        List and filter notes. Supports pagination, sorting, field selection, search, filters, and joins.
-
-        This resource has no full-text search columns, so the `search` parameter has no effect. Filter on specific fields instead.
-      parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
-      responses:
-        '200':
-          description: A page of notes.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NoteListResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    post:
-      tags:
-      - Notes
-      summary: Create a note
-      description: Create one note, or several at once by sending an array.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-              - $ref: '#/components/schemas/NoteCreate'
-              - type: array
-                items:
-                  $ref: '#/components/schemas/NoteCreate'
-      responses:
-        '200':
-          description: The created note. An array request returns `values` instead of `value`.
-          content:
-            application/json:
-              schema:
-                oneOf:
-                - $ref: '#/components/schemas/NoteSingleResponse'
-                - $ref: '#/components/schemas/NoteMultiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /note/count:
-    get:
-      tags:
-      - Notes
-      summary: Count notes
-      description: Count the notes matching your filters.
-      parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
-      responses:
-        '200':
-          description: The matching count.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CountResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    post:
-      tags:
-      - Notes
-      summary: Count notes (POST)
-      description: |-
-        Same as `GET /note/count`, with the filters in the request body. Use this when your filter is too long for a URL.
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/QueryBody'
-      responses:
-        '200':
-          description: The matching count.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CountResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /note/query:
-    post:
-      tags:
-      - Notes
-      summary: Query notes
-      description: |-
-        Same as `GET /note`, with the query in the request body. Use this when your filter or `select` list is too long for a URL.
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/QueryBody'
-      responses:
-        '200':
-          description: A page of notes.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NoteListResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /note/group-and-count:
-    post:
-      tags:
-      - Notes
-      summary: Group and count notes
-      description: |-
-        Group notes by one or more fields and count each group. Accepts the same filters as the list endpoint.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GroupAndCountBody'
-      responses:
-        '200':
-          description: One row per group.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GroupAndCountResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /note/bulk:
-    patch:
-      tags:
-      - Notes
-      summary: Update many notes
-      description: |-
-        Apply one set of changes to every note matching your filter.
-
-        The filter must be in the **query string**. A filter in the body is ignored, and a request with no filter is rejected with `400` so you cannot update the whole table by accident.
-      parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NoteUpdate'
-      responses:
-        '200':
-          description: The updated notes.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NoteMultiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    put:
-      tags:
-      - Notes
-      summary: Upsert many notes
-      description: |-
-        Insert or update many notes in one call. `update` is required: it lists the columns to overwrite when a row with a conflicting unique key already exists.
-      parameters:
-      - $ref: '#/components/parameters/update'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/NoteCreate'
-      responses:
-        '200':
-          description: The upserted notes.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NoteMultiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    delete:
-      tags:
-      - Notes
-      summary: Delete many notes (not available)
-      description: |-
-        Not available on any resource. This route always returns `403`, so a broad filter can never wipe out a table in one call. Delete records one at a time, or archive them in bulk with `PATCH /note/bulk`.
-      responses:
-        '403':
-          $ref: '#/components/responses/Forbidden'
-  /note/{id}:
-    get:
-      tags:
-      - Notes
-      summary: Get a note
-      description: Fetch one note by id.
-      parameters:
-      - $ref: '#/components/parameters/id'
-      - $ref: '#/components/parameters/select'
-      responses:
-        '200':
-          description: The note.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NoteSingleResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    patch:
-      tags:
-      - Notes
-      summary: Update a note
-      description: Change one note. Only the fields you send are touched.
-      parameters:
-      - $ref: '#/components/parameters/id'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NoteUpdate'
-      responses:
-        '200':
-          description: The updated note.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NoteSingleResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    put:
-      tags:
-      - Notes
-      summary: Upsert a note
-      description: |-
-        Insert the note, or update it when a row with a conflicting unique key already exists. `update` is required and lists which columns to overwrite on conflict.
-      parameters:
-      - $ref: '#/components/parameters/id'
-      - $ref: '#/components/parameters/update'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NoteCreate'
-      responses:
-        '200':
-          description: The upserted note.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NoteSingleResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    delete:
-      tags:
-      - Notes
-      summary: Delete a note
-      description: |-
-        **Destructive.** Permanently removes the note and its contents. This cannot be undone and there is no archive for notes.
-      parameters:
-      - $ref: '#/components/parameters/id'
-      responses:
-        '204':
-          description: Deleted. The response has no body.
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /note/by-deliverable:
-    put:
-      tags:
-      - Notes
-      summary: Create or update a note by deliverable
-      description: |-
-        Write the note for a deliverable without needing to know whether one exists yet. It is created if missing and updated if not.
-
-        This is the endpoint to use for notes: because there is at most one note per deliverable, keying by `deliverableId` saves you a lookup.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - deliverableId
-              - content
-              properties:
-                deliverableId:
-                  type: string
-                  format: uuid
-                  description: Deliverable the note belongs to.
-                content:
-                  type: object
-                  description: |-
-                    Note body as a rich-text document. Must be an object: a plain string is rejected with `400`.
-                  additionalProperties: true
-                  example:
-                    type: doc
-                    content: []
-      responses:
-        '200':
-          description: The saved note.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NoteSingleResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /notification:
-    get:
-      tags:
-      - Notifications
-      summary: List notifications
-      description: |-
-        List and filter notifications. Supports pagination, sorting, field selection, search, filters, and joins.
-
-        This resource has no full-text search columns, so the `search` parameter has no effect. Filter on specific fields instead.
-      parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
-      responses:
-        '200':
-          description: A page of notifications.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationListResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /notification/count:
-    get:
-      tags:
-      - Notifications
-      summary: Count notifications
-      description: Count the notifications matching your filters.
-      parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
-      responses:
-        '200':
-          description: The matching count.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CountResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    post:
-      tags:
-      - Notifications
-      summary: Count notifications (POST)
-      description: |-
-        Same as `GET /notification/count`, with the filters in the request body. Use this when your filter is too long for a URL.
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/QueryBody'
-      responses:
-        '200':
-          description: The matching count.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CountResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /notification/query:
-    post:
-      tags:
-      - Notifications
-      summary: Query notifications
-      description: |-
-        Same as `GET /notification`, with the query in the request body. Use this when your filter or `select` list is too long for a URL.
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/QueryBody'
-      responses:
-        '200':
-          description: A page of notifications.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationListResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /notification/group-and-count:
-    post:
-      tags:
-      - Notifications
-      summary: Group and count notifications
-      description: |-
-        Group notifications by one or more fields and count each group. Accepts the same filters as the list endpoint.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GroupAndCountBody'
-      responses:
-        '200':
-          description: One row per group.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GroupAndCountResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /notification/{id}:
-    get:
-      tags:
-      - Notifications
-      summary: Get a notification
-      description: Fetch one notification by id.
-      parameters:
-      - $ref: '#/components/parameters/id'
-      - $ref: '#/components/parameters/select'
-      responses:
-        '200':
-          description: The notification.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationSingleResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /notification/read-channel-comments:
-    post:
-      tags:
-      - Notifications
-      summary: Mark channel comments as read
-      description: Mark every comment notification in one channel as read for the user behind your API
-        key.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - channelId
-              properties:
-                channelId:
-                  type: string
-                  format: uuid
-                  description: Channel to clear.
-      responses:
-        '200':
-          description: Marked as read.
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /notification/read-deliverable-documents:
-    post:
-      tags:
-      - Notifications
-      summary: Mark deliverable documents as read
-      description: |-
-        Mark every document notification on one deliverable as read for the user behind your API key.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-              - deliverableId
-              properties:
-                deliverableId:
-                  type: string
-                  format: uuid
-                  description: Deliverable to clear.
-      responses:
-        '200':
-          description: Marked as read.
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
   /qc-inspection-set:
     get:
       tags:
@@ -5156,7 +4343,7 @@ paths:
   /role:
     get:
       tags:
-      - Organization
+      - Roles
       summary: List roles
       description: |-
         List and filter roles. Supports pagination, sorting, field selection, search, filters, and joins.
@@ -5186,7 +4373,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     post:
       tags:
-      - Organization
+      - Roles
       summary: Create a role
       description: Create one role, or several at once by sending an array.
       requestBody:
@@ -5221,7 +4408,7 @@ paths:
   /role/count:
     get:
       tags:
-      - Organization
+      - Roles
       summary: Count roles
       description: Count the roles matching your filters.
       parameters:
@@ -5244,7 +4431,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     post:
       tags:
-      - Organization
+      - Roles
       summary: Count roles (POST)
       description: |-
         Same as `GET /role/count`, with the filters in the request body. Use this when your filter is too long for a URL.
@@ -5272,7 +4459,7 @@ paths:
   /role/query:
     post:
       tags:
-      - Organization
+      - Roles
       summary: Query roles
       description: |-
         Same as `GET /role`, with the query in the request body. Use this when your filter or `select` list is too long for a URL.
@@ -5300,7 +4487,7 @@ paths:
   /role/group-and-count:
     post:
       tags:
-      - Organization
+      - Roles
       summary: Group and count roles
       description: |-
         Group roles by one or more fields and count each group. Accepts the same filters as the list endpoint.
@@ -5328,7 +4515,7 @@ paths:
   /role/bulk:
     patch:
       tags:
-      - Organization
+      - Roles
       summary: Update many roles
       description: |-
         Apply one set of changes to every role matching your filter.
@@ -5362,7 +4549,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     put:
       tags:
-      - Organization
+      - Roles
       summary: Upsert many roles
       description: |-
         Insert or update many roles in one call. `update` is required: it lists the columns to overwrite when a row with a conflicting unique key already exists.
@@ -5395,7 +4582,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     delete:
       tags:
-      - Organization
+      - Roles
       summary: Delete many roles (not available)
       description: |-
         Not available on any resource. This route always returns `403`, so a broad filter can never wipe out a table in one call. Delete records one at a time, or archive them in bulk with `PATCH /role/bulk`.
@@ -5405,7 +4592,7 @@ paths:
   /role/{id}:
     get:
       tags:
-      - Organization
+      - Roles
       summary: Get a role
       description: Fetch one role by id.
       parameters:
@@ -5430,7 +4617,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     patch:
       tags:
-      - Organization
+      - Roles
       summary: Update a role
       description: Change one role. Only the fields you send are touched.
       parameters:
@@ -5462,7 +4649,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     put:
       tags:
-      - Organization
+      - Roles
       summary: Upsert a role
       description: |-
         Insert the role, or update it when a row with a conflicting unique key already exists. `update` is required and lists which columns to overwrite on conflict.
@@ -5496,7 +4683,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     delete:
       tags:
-      - Organization
+      - Roles
       summary: Delete a role
       description: |-
         **Destructive.** Permanently removes the role. This cannot be undone and there is no archive for roles.
@@ -5522,7 +4709,7 @@ paths:
   /role/{id}/duplicate:
     post:
       tags:
-      - Organization
+      - Roles
       summary: Duplicate a role
       description: |-
         Copy a role, permissions and all, under a new unique name. Useful as a starting point when you want a variant of an existing role.
@@ -5550,7 +4737,7 @@ paths:
   /organization-member:
     get:
       tags:
-      - Organization
+      - Users
       summary: List users
       description: |-
         List and filter users. Supports pagination, sorting, field selection, search, filters, and joins.
@@ -5580,7 +4767,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     post:
       tags:
-      - Organization
+      - Users
       summary: Invite a user
       description: |-
         Invite someone into your organization. This replaces the standard create: you send an email address rather than a user id.
@@ -5637,7 +4824,7 @@ paths:
   /organization-member/count:
     get:
       tags:
-      - Organization
+      - Users
       summary: Count users
       description: Count the users matching your filters.
       parameters:
@@ -5660,7 +4847,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     post:
       tags:
-      - Organization
+      - Users
       summary: Count users (POST)
       description: |-
         Same as `GET /organization-member/count`, with the filters in the request body. Use this when your filter is too long for a URL.
@@ -5688,7 +4875,7 @@ paths:
   /organization-member/query:
     post:
       tags:
-      - Organization
+      - Users
       summary: Query users
       description: |-
         Same as `GET /organization-member`, with the query in the request body. Use this when your filter or `select` list is too long for a URL.
@@ -5716,7 +4903,7 @@ paths:
   /organization-member/group-and-count:
     post:
       tags:
-      - Organization
+      - Users
       summary: Group and count users
       description: |-
         Group users by one or more fields and count each group. Accepts the same filters as the list endpoint.
@@ -5744,7 +4931,7 @@ paths:
   /organization-member/bulk:
     patch:
       tags:
-      - Organization
+      - Users
       summary: Update many users
       description: |-
         Apply one set of changes to every user matching your filter.
@@ -5778,7 +4965,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     put:
       tags:
-      - Organization
+      - Users
       summary: Upsert many users
       description: |-
         Insert or update many users in one call. `update` is required: it lists the columns to overwrite when a row with a conflicting unique key already exists.
@@ -5811,7 +4998,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     delete:
       tags:
-      - Organization
+      - Users
       summary: Delete many users (not available)
       description: |-
         Not available on any resource. This route always returns `403`, so a broad filter can never wipe out a table in one call. Delete records one at a time, or archive them in bulk with `PATCH /organization-member/bulk`.
@@ -5821,7 +5008,7 @@ paths:
   /organization-member/{id}:
     get:
       tags:
-      - Organization
+      - Users
       summary: Get an user
       description: Fetch one user by id.
       parameters:
@@ -5846,7 +5033,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     patch:
       tags:
-      - Organization
+      - Users
       summary: Update an user
       description: Change one user. Only the fields you send are touched.
       parameters:
@@ -5878,7 +5065,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     put:
       tags:
-      - Organization
+      - Users
       summary: Upsert an user
       description: |-
         Insert the user, or update it when a row with a conflicting unique key already exists. `update` is required and lists which columns to overwrite on conflict.
@@ -5912,7 +5099,7 @@ paths:
           $ref: '#/components/responses/RateLimited'
     delete:
       tags:
-      - Organization
+      - Users
       summary: Delete an user
       description: |-
         **Destructive.** Permanently removes the membership, which cuts the user's access to your organization. This cannot be undone.
@@ -5938,7 +5125,7 @@ paths:
   /organization-member/{id}/deactivate:
     patch:
       tags:
-      - Organization
+      - Users
       summary: Deactivate a user
       description: |-
         Take away a user's access while keeping the membership and its history. This is the reversible alternative to deleting the membership. Undo it with `/reactivate`.
@@ -5962,7 +5149,7 @@ paths:
   /organization-member/{id}/reactivate:
     patch:
       tags:
-      - Organization
+      - Users
       summary: Reactivate a user
       description: Give a deactivated user their access back, with the role they had.
       parameters:
@@ -5985,7 +5172,7 @@ paths:
   /organization-member/{id}/invite/resend:
     post:
       tags:
-      - Organization
+      - Users
       summary: Resend a user invitation
       description: |-
         Send the invitation email again. Useful when the first one was missed and `appUser.status` is still `pending`.
@@ -6004,76 +5191,6 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /organization-member/export:
-    get:
-      tags:
-      - Organization
-      summary: Export users to Excel
-      description: |-
-        Download your organization's users as an `.xlsx` file. Takes the same filters as the list endpoint.
-      parameters:
-      - $ref: '#/components/parameters/filter'
-      - $ref: '#/components/parameters/timezone'
-      responses:
-        '200':
-          description: The workbook.
-          content:
-            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
-              schema:
-                type: string
-                format: binary
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /organization-member/import:
-    post:
-      tags:
-      - Organization
-      summary: Import users from Excel
-      description: |-
-        Upload an `.xlsx` file of users. Maximum 10 MB. Problems come back as `200` with details in the body, the same as the deliverable import.
-
-        Rate limited to 100 requests per minute.
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-              - file
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: The `.xlsx` file.
-                timezone:
-                  type: string
-                  description: IANA timezone for reading dates in the file.
-      responses:
-        '200':
-          description: What was imported, and what was not.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ImportResult'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
   /concepts:
@@ -8637,196 +7754,6 @@ components:
         hasMore:
           type: boolean
           description: '`true` when another page is available.'
-    Note:
-      type: object
-      description: |-
-        One rich-text note per deliverable. Notes are keyed by deliverable, so there is at most one for each.
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique id. Generated on create unless you supply one.
-        organizationId:
-          type: string
-          format: uuid
-          description: Your organization. Taken from the API key, never from the request body.
-        deliverableId:
-          type: string
-          format: uuid
-          description: Deliverable the note belongs to.
-        content:
-          type: object
-          description: |-
-            Note body as a rich-text document. This must be a JSON object: a plain string is rejected with `400`.
-          example:
-            type: doc
-            content: []
-          additionalProperties: true
-        createdAt:
-          type: string
-          format: date-time
-          description: When the record was created.
-        updatedAt:
-          type: string
-          format: date-time
-          description: When the record last changed.
-    NoteCreate:
-      type: object
-      required:
-      - deliverableId
-      - content
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique id. Generated on create unless you supply one.
-        deliverableId:
-          type: string
-          format: uuid
-          description: Deliverable the note belongs to.
-        content:
-          type: object
-          description: |-
-            Note body as a rich-text document. This must be a JSON object: a plain string is rejected with `400`.
-          example:
-            type: doc
-            content: []
-          additionalProperties: true
-        createdAt:
-          type: string
-          format: date-time
-          description: When the record was created.
-        updatedAt:
-          type: string
-          format: date-time
-          description: When the record last changed.
-    NoteUpdate:
-      type: object
-      description: Every field is optional. Only the fields you send are changed.
-      properties:
-        deliverableId:
-          type: string
-          format: uuid
-          description: Deliverable the note belongs to.
-        content:
-          type: object
-          description: |-
-            Note body as a rich-text document. This must be a JSON object: a plain string is rejected with `400`.
-          example:
-            type: doc
-            content: []
-          additionalProperties: true
-    NoteSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Note'
-    NoteMultiResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Note'
-    NoteListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Note'
-        hasMore:
-          type: boolean
-          description: '`true` when another page is available.'
-    Notification:
-      type: object
-      description: |-
-        Notifications addressed to the user behind your API key, plus the two calls that mark them read.
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique id of this user's copy of the notification.
-        organizationId:
-          type: string
-          format: uuid
-          description: Your organization. Taken from the API key.
-        appUserId:
-          type: string
-          format: uuid
-          description: User the notification was delivered to.
-        notificationId:
-          type: string
-          format: uuid
-          description: The underlying notification, shared across recipients.
-        viewedAt:
-          type: string
-          format: date-time
-          description: When this user read it. `null` means unread.
-          nullable: true
-        isArchived:
-          type: boolean
-          description: '`true` when this user has archived it.'
-          default: false
-        notification:
-          type: object
-          description: The shared notification this copy points at.
-          properties:
-            id:
-              type: string
-              format: uuid
-              description: Underlying notification id.
-            type:
-              type: string
-              description: What kind of event it describes.
-            title:
-              type: string
-              description: Headline.
-            description:
-              type: string
-              description: Longer body. Omitted when there is none.
-            href:
-              type: string
-              description: Link into the app.
-              nullable: true
-            data:
-              type: object
-              description: Event payload. Shape depends on `type`.
-              additionalProperties: true
-            createdAt:
-              type: string
-              format: date-time
-              description: When the event happened.
-        createdAt:
-          type: string
-          format: date-time
-          description: When the copy was created.
-        updatedAt:
-          type: string
-          format: date-time
-          description: When the copy last changed.
-    NotificationSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Notification'
-    NotificationMultiResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Notification'
-    NotificationListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Notification'
-        hasMore:
-          type: boolean
-          description: '`true` when another page is available.'
     QCInspectionSet:
       type: object
       description: |-
@@ -9982,58 +8909,6 @@ components:
             description: Percent complete.
             minimum: 0
             maximum: 100
-    ImportResult:
-      type: object
-      description: |-
-        Row-level and file-level problems come back here with `200`. They do not fail the request, so always read `errors` before treating an import as clean.
-      properties:
-        imported:
-          type: integer
-          description: Rows written.
-        errors:
-          type: array
-          items:
-            type: object
-            description: One blocking problem. Nothing from this row was written.
-            properties:
-              row:
-                type: integer
-                description: |-
-                  1-based data row. `0` means the problem applies to the whole file, such as a missing required column.
-              column:
-                type: string
-                description: Column header at fault.
-              value:
-                description: The value that was rejected.
-              kind:
-                type: string
-                enum:
-                - structure
-                - validation
-                - resolution
-                - parse
-                - server
-                description: What kind of problem it is.
-              message:
-                type: string
-                description: What went wrong.
-          description: Problems that stopped rows from being written.
-        warnings:
-          type: array
-          items:
-            type: object
-            description: One non-blocking problem.
-            properties:
-              row:
-                type: integer
-                description: 1-based data row.
-              column:
-                type: string
-                description: Column header.
-              message:
-                type: string
-                description: What was adjusted or ignored.
-          description: Problems that did not stop the import.
     ConceptNode:
       type: object
       description: |-

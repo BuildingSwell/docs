@@ -77,15 +77,3 @@ Every error carries the same envelope.
   written against the older shape. Read `error.code` rather than the top-level
   field.
 </Warning>
-
-## Imports do not fail loudly
-
-Import endpoints answer `200` even when rows were rejected. A `200` means the file
-was processed, not that everything landed.
-
-```json
-{ "imported": 3, "errors": [], "warnings": [] }
-```
-
-Always read `errors` before treating an import as clean. See
-[import and export](/guides/import-export).

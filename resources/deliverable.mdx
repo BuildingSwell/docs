@@ -6,7 +6,6 @@ description: "The work tree: orders, routes, phases, components, stages, steps, 
 One generic model carries the whole work tree. A node's `type` decides which
 domain concept it represents, from an order at the top down to a single step.
 
-**Import and export:** yes, see [import and export](/guides/import-export)
 **Search columns:** `name`, `identifier`
 
 Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
@@ -260,13 +259,6 @@ sessions and daily-plan assignments were stopped because their deliverable reach
   [`POST /concepts/root/{rootId}/progress/{id}/plan`](/concepts/overview) first. It
   computes the effect and writes nothing.
 </Tip>
-
-### Import and export
-
-`GET /deliverable/export` and `POST /deliverable/import` handle Excel, and
-`GET /deliverable/export/json` and `POST /deliverable/import/json` handle JSON. The
-JSON import upserts on `identifier`. See
-[import and export](/guides/import-export).
 
 ## What you can write
 

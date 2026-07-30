@@ -75,8 +75,8 @@ POST /deliverable/restore/batch
 ```
 
 <Note>
-  Not every resource is archivable. Work sessions, notes, documents, comments, and
-  QC records have no `isArchived` field, so for those the only removal is a delete.
+  Not every resource is archivable. Work sessions, documents, comments, and QC
+  records have no `isArchived` field, so for those the only removal is a delete.
 </Note>
 
 ## What each delete actually does
@@ -93,7 +93,6 @@ first, some are refused outright.
 | [Dependency](/resources/deliverable-dependencies) | Removes the link and re-rolls the successor's dates. Both deliverables stay. |
 | [Comment](/resources/comment) | Removes the row and its replies. The app instead soft-deletes by setting `deletedAt`. |
 | [Document](/resources/document) | Removes the document record. |
-| [Note](/resources/note) | Removes the note and its contents. |
 | [QC inspection set](/resources/qc-inspection-set) | Removes the set and the inspections under it, which is your QC record for that work. |
 | [QC template](/resources/qc-template) | Fails with `409` while any inspection set still references the version. |
 | [Person](/resources/worker) | Always fails with `403`. People are archived, never deleted. |
