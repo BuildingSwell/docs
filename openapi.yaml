@@ -36,8 +36,6 @@ tags:
   description: Time logged by one person against one deliverable.
 - name: Dependencies
   description: Scheduling links between deliverables.
-- name: Comments
-  description: Messages on a deliverable channel.
 - name: Documents
   description: Files attached to orders.
 - name: QC
@@ -775,7 +773,9 @@ paths:
       description: |-
         **Destructive.** Permanently removes the station. This is not the archive operation and it cannot be undone.
 
-        Deliverable stage nodes point at a station through `data.stageId`, which is a JSON value rather than a foreign key, so the database will not stop you. Those nodes keep an id that no longer resolves, and any QC entry referencing the station has its `stageId` set to `null`. Archive instead unless you are certain nothing points here.
+        In practice this fails with `409` whenever a team or a route step is still assigned to the station, because those links are `ON DELETE NO ACTION`. Reassign them first, or archive the station instead.
+
+        When the delete does go through, deliverable stage nodes are not protected: they point at a station through `data.stageId`, which is a JSON value rather than a foreign key, so those nodes keep an id that no longer resolves. Any QC entry referencing the station has its `stageId` set to `null`.
       parameters:
       - $ref: '#/components/parameters/id'
       responses:
@@ -2525,370 +2525,6 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
-  /comment:
-    get:
-      tags:
-      - Comments
-      summary: List comments
-      description: |-
-        List and filter comments. Supports pagination, sorting, field selection, search, filters, and joins.
-
-        This resource has no full-text search columns, so the `search` parameter has no effect. Filter on specific fields instead.
-      parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
-      responses:
-        '200':
-          description: A page of comments.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CommentListResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    post:
-      tags:
-      - Comments
-      summary: Create a comment
-      description: Create one comment, or several at once by sending an array.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-              - $ref: '#/components/schemas/CommentCreate'
-              - type: array
-                items:
-                  $ref: '#/components/schemas/CommentCreate'
-      responses:
-        '200':
-          description: The created comment. An array request returns `values` instead of `value`.
-          content:
-            application/json:
-              schema:
-                oneOf:
-                - $ref: '#/components/schemas/CommentSingleResponse'
-                - $ref: '#/components/schemas/CommentMultiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /comment/count:
-    get:
-      tags:
-      - Comments
-      summary: Count comments
-      description: Count the comments matching your filters.
-      parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
-      responses:
-        '200':
-          description: The matching count.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CountResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    post:
-      tags:
-      - Comments
-      summary: Count comments (POST)
-      description: |-
-        Same as `GET /comment/count`, with the filters in the request body. Use this when your filter is too long for a URL.
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/QueryBody'
-      responses:
-        '200':
-          description: The matching count.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CountResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /comment/query:
-    post:
-      tags:
-      - Comments
-      summary: Query comments
-      description: |-
-        Same as `GET /comment`, with the query in the request body. Use this when your filter or `select` list is too long for a URL.
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/QueryBody'
-      responses:
-        '200':
-          description: A page of comments.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CommentListResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /comment/group-and-count:
-    post:
-      tags:
-      - Comments
-      summary: Group and count comments
-      description: |-
-        Group comments by one or more fields and count each group. Accepts the same filters as the list endpoint.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/GroupAndCountBody'
-      responses:
-        '200':
-          description: One row per group.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GroupAndCountResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-  /comment/bulk:
-    patch:
-      tags:
-      - Comments
-      summary: Update many comments
-      description: |-
-        Apply one set of changes to every comment matching your filter.
-
-        The filter must be in the **query string**. A filter in the body is ignored, and a request with no filter is rejected with `400` so you cannot update the whole table by accident.
-      parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CommentUpdate'
-      responses:
-        '200':
-          description: The updated comments.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CommentMultiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    put:
-      tags:
-      - Comments
-      summary: Upsert many comments
-      description: |-
-        Insert or update many comments in one call. `update` is required: it lists the columns to overwrite when a row with a conflicting unique key already exists.
-      parameters:
-      - $ref: '#/components/parameters/update'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/CommentCreate'
-      responses:
-        '200':
-          description: The upserted comments.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CommentMultiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    delete:
-      tags:
-      - Comments
-      summary: Delete many comments (not available)
-      description: |-
-        Not available on any resource. This route always returns `403`, so a broad filter can never wipe out a table in one call. Delete records one at a time, or archive them in bulk with `PATCH /comment/bulk`.
-      responses:
-        '403':
-          $ref: '#/components/responses/Forbidden'
-  /comment/{id}:
-    get:
-      tags:
-      - Comments
-      summary: Get a comment
-      description: Fetch one comment by id.
-      parameters:
-      - $ref: '#/components/parameters/id'
-      - $ref: '#/components/parameters/select'
-      responses:
-        '200':
-          description: The comment.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CommentSingleResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    patch:
-      tags:
-      - Comments
-      summary: Update a comment
-      description: Change one comment. Only the fields you send are touched.
-      parameters:
-      - $ref: '#/components/parameters/id'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CommentUpdate'
-      responses:
-        '200':
-          description: The updated comment.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CommentSingleResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    put:
-      tags:
-      - Comments
-      summary: Upsert a comment
-      description: |-
-        Insert the comment, or update it when a row with a conflicting unique key already exists. `update` is required and lists which columns to overwrite on conflict.
-      parameters:
-      - $ref: '#/components/parameters/id'
-      - $ref: '#/components/parameters/update'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CommentCreate'
-      responses:
-        '200':
-          description: The upserted comment.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CommentSingleResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    delete:
-      tags:
-      - Comments
-      summary: Delete a comment
-      description: |-
-        **Destructive.** Permanently removes the comment row, along with any replies that point at it. This is different from the soft delete the app performs, which sets `deletedAt` and keeps the thread intact. To match the app, `PATCH` `deletedAt` instead.
-      parameters:
-      - $ref: '#/components/parameters/id'
-      responses:
-        '204':
-          description: Deleted. The response has no body.
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
   /document:
     get:
       tags:
@@ -3814,6 +3450,8 @@ paths:
       description: |-
         List and filter people. Supports pagination, sorting, field selection, search, filters, and joins.
 
+        Unlike every other archivable resource, archived people are **not** filtered out by default. Pass `isArchived=false` when you only want active people.
+
         Full-text `search` covers `name`, `customerIdentifier`.
       parameters:
       - $ref: '#/components/parameters/page'
@@ -4054,7 +3692,7 @@ paths:
       - People (Workers)
       summary: Delete many people (not available)
       description: |-
-        Not available on any resource. This route always returns `403`, so a broad filter can never wipe out a table in one call. Delete records one at a time, or archive them in bulk with `PATCH /worker/bulk`.
+        Not available on any resource. This route always returns `403`, so a broad filter can never wipe out a table in one call. People cannot be deleted one at a time either: `DELETE /worker/{id}` also returns `403`. Archive them in bulk with `PATCH /worker/bulk` instead.
       responses:
         '403':
           $ref: '#/components/responses/Forbidden'
@@ -5759,7 +5397,7 @@ components:
     page:
       name: page
       in: query
-      description: Page to return, starting at 1. `page=0` is rejected.
+      description: 'Page to return, starting at 1. Do not send `page=0`: it produces a negative offset and fails with a `500`.'
       schema:
         type: integer
         minimum: 1
@@ -5767,10 +5405,10 @@ components:
     pageSize:
       name: pageSize
       in: query
-      description: Records per page.
+      description: Records per page. Defaults to 100 when no pagination parameter is sent. `/timesheet` applies no default at all, so send this explicitly.
       schema:
         type: integer
-        default: 50
+        default: 100
     orderBy:
       name: orderBy
       in: query
@@ -5783,7 +5421,7 @@ components:
       name: select
       in: query
       description: |-
-        Return only these fields. Repeat the parameter for each field: a single comma-separated value is ignored.
+        Return only these fields. Repeat the parameter for each field: a single comma-separated value is rejected with `400`.
       schema:
         type: array
         items:
@@ -5814,7 +5452,7 @@ components:
       in: query
       required: true
       description: |-
-        Columns to overwrite when the row already exists. Repeat the parameter for each column: a single comma-separated value is not accepted. Without it the request is rejected with `400`.
+        Columns to overwrite when the row already exists. Repeat the parameter for each column: a single comma-separated value is read as one column name and fails at the database. Without the parameter the request is rejected with `400`.
       schema:
         type: array
         items:
@@ -5942,8 +5580,8 @@ components:
           default: 1
         pageSize:
           type: integer
-          description: Records per page.
-          default: 50
+          description: Records per page. Defaults to 100 when omitted.
+          default: 100
         orderBy:
           oneOf:
           - type: string
@@ -6955,7 +6593,7 @@ components:
         breakTimeInSec:
           type: integer
           description: |-
-            Unpaid break seconds that fall inside this record's start/end window, computed by the database on every read. Read-only: it cannot be written, and it is `0` while the record is still open.
+            Unpaid break seconds that fall inside this record's start/end window. The database derives it whenever the record is written, from `startDate`, `endDate`, and `shiftWorkHours`. Read-only: it cannot be written, and it is `0` while the record is still open.
           nullable: true
         externalSource:
           type: string
@@ -7374,223 +7012,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeliverableDependency'
-        hasMore:
-          type: boolean
-          description: '`true` when another page is available.'
-    Comment:
-      type: object
-      description: A message in a deliverable's comment channel, with optional attachments.
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique id. Generated on create unless you supply one.
-        organizationId:
-          type: string
-          format: uuid
-          description: Your organization. Taken from the API key, never from the request body.
-        channelId:
-          type: string
-          format: uuid
-          description: Channel the comment belongs to.
-        appUserId:
-          type: string
-          format: uuid
-          description: Author. Defaults to the user behind the API key when you leave it out.
-        text:
-          type: string
-          description: Comment body. Up to 50,000 characters.
-          maxLength: 50000
-        isEdited:
-          type: boolean
-          description: '`true` once the comment has been edited.'
-          default: false
-        rootDiscussionId:
-          type: string
-          format: uuid
-          description: Thread this comment belongs to. Shared by every comment in the thread.
-          nullable: true
-        replyDiscussionId:
-          type: string
-          format: uuid
-          description: Exact comment this one replies to.
-          nullable: true
-        deletedAt:
-          type: string
-          format: date-time
-          description: |-
-            When the comment was soft-deleted. The row is kept as a tombstone so threads and quotes stay readable.
-          nullable: true
-        attachments:
-          type: array
-          description: Files attached to the comment. Defaults to an empty list.
-          items:
-            type: object
-            description: One attachment.
-            required:
-            - name
-            - key
-            properties:
-              name:
-                type: string
-                description: File name shown to readers.
-              key:
-                type: string
-                description: Storage key for the file.
-              url:
-                type: string
-                description: Time-limited download link, generated on read. Do not store it.
-        createdAt:
-          type: string
-          format: date-time
-          description: When the record was created.
-        updatedAt:
-          type: string
-          format: date-time
-          description: When the record last changed.
-    CommentCreate:
-      type: object
-      required:
-      - channelId
-      - text
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique id. Generated on create unless you supply one.
-        channelId:
-          type: string
-          format: uuid
-          description: Channel the comment belongs to.
-        appUserId:
-          type: string
-          format: uuid
-          description: Author. Defaults to the user behind the API key when you leave it out.
-        text:
-          type: string
-          description: Comment body. Up to 50,000 characters.
-          maxLength: 50000
-        isEdited:
-          type: boolean
-          description: '`true` once the comment has been edited.'
-          default: false
-        rootDiscussionId:
-          type: string
-          format: uuid
-          description: Thread this comment belongs to. Shared by every comment in the thread.
-          nullable: true
-        replyDiscussionId:
-          type: string
-          format: uuid
-          description: Exact comment this one replies to.
-          nullable: true
-        deletedAt:
-          type: string
-          format: date-time
-          description: |-
-            When the comment was soft-deleted. The row is kept as a tombstone so threads and quotes stay readable.
-          nullable: true
-        attachments:
-          type: array
-          description: Files attached to the comment. Defaults to an empty list.
-          items:
-            type: object
-            description: One attachment.
-            required:
-            - name
-            - key
-            properties:
-              name:
-                type: string
-                description: File name shown to readers.
-              key:
-                type: string
-                description: Storage key for the file.
-              url:
-                type: string
-                description: Time-limited download link, generated on read. Do not store it.
-        createdAt:
-          type: string
-          format: date-time
-          description: When the record was created.
-        updatedAt:
-          type: string
-          format: date-time
-          description: When the record last changed.
-    CommentUpdate:
-      type: object
-      description: Every field is optional. Only the fields you send are changed.
-      properties:
-        channelId:
-          type: string
-          format: uuid
-          description: Channel the comment belongs to.
-        appUserId:
-          type: string
-          format: uuid
-          description: Author. Defaults to the user behind the API key when you leave it out.
-        text:
-          type: string
-          description: Comment body. Up to 50,000 characters.
-          maxLength: 50000
-        isEdited:
-          type: boolean
-          description: '`true` once the comment has been edited.'
-          default: false
-        rootDiscussionId:
-          type: string
-          format: uuid
-          description: Thread this comment belongs to. Shared by every comment in the thread.
-          nullable: true
-        replyDiscussionId:
-          type: string
-          format: uuid
-          description: Exact comment this one replies to.
-          nullable: true
-        deletedAt:
-          type: string
-          format: date-time
-          description: |-
-            When the comment was soft-deleted. The row is kept as a tombstone so threads and quotes stay readable.
-          nullable: true
-        attachments:
-          type: array
-          description: Files attached to the comment. Defaults to an empty list.
-          items:
-            type: object
-            description: One attachment.
-            required:
-            - name
-            - key
-            properties:
-              name:
-                type: string
-                description: File name shown to readers.
-              key:
-                type: string
-                description: Storage key for the file.
-              url:
-                type: string
-                description: Time-limited download link, generated on read. Do not store it.
-    CommentSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Comment'
-    CommentMultiResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Comment'
-    CommentListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Comment'
         hasMore:
           type: boolean
           description: '`true` when another page is available.'
@@ -8353,7 +7774,7 @@ components:
         breakTimeInSec:
           type: integer
           description: |-
-            Unpaid break seconds that fall inside this record's start/end window, computed by the database on every read. Read-only: it cannot be written, and it is `0` while the record is still open.
+            Unpaid break seconds that fall inside this record's start/end window. The database derives it whenever the record is written, from `startDate`, `endDate`, and `shiftWorkHours`. Read-only: it cannot be written, and it is `0` while the record is still open.
           nullable: true
         isEdited:
           type: boolean
@@ -8377,7 +7798,7 @@ components:
           nullable: true
         externalSync:
           type: string
-          description: 'Sync state for the external system: `synced`, `not synced`, or `none`.'
+          description: 'Sync state for the external system. Free-form text, not an enum: `synced`, `not synced`, `not_synced`, `none`, and the Quickbase job''s `synced start date` / `synced start and end date` all occur. Match loosely, or filter with `externalSync:ne=synced`.'
           example: synced
         stageId:
           type: string

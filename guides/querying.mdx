@@ -10,13 +10,22 @@ query is too long for a URL.
 ## Pagination
 
 ```http
-GET /project?page=1&pageSize=50
+GET /project?page=1&pageSize=100
 ```
 
-- `page` starts at `1`, and defaults to `1`. `page=0` is rejected.
-- `pageSize` defaults to `50`.
+- `page` starts at `1`, and defaults to `1`. Do not send `page=0`: it is not
+  rejected cleanly, it produces a negative offset and fails with a `500`.
+- `pageSize` defaults to `100` when you send no pagination parameters at all. Send
+  it explicitly rather than relying on the default, which differs between the
+  standard endpoints and `/timesheet`.
 - The response includes `hasMore`, so page until it is `false` rather than counting
   first.
+
+<Warning>
+  `GET /timesheet` applies **no** default page size. Without an explicit `pageSize`
+  it returns every matching record in one response and reports `hasMore: false`.
+  Always pass `pageSize` there.
+</Warning>
 
 ## Sorting
 
@@ -30,8 +39,8 @@ Repeat `orderBy[]` to sort by more than one field, in the order you list them.
 ## Returning only some fields
 
 Repeat the `select` parameter once per field. A single comma-separated value is
-**silently ignored**, which is worth knowing because the request still succeeds and
-returns everything:
+**rejected** with `400` and `Invalid select field: 'id,name'`, so do not reach for
+the shorthand:
 
 ```http
 GET /project?select=id&select=name&select=identifier

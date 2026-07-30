@@ -13,20 +13,26 @@ guessing:
 
 | Header | Meaning |
 | ------ | ------- |
+| `RateLimit-Policy` | The limit and window, as `<limit>;w=<seconds>`. |
 | `RateLimit-Limit` | Requests allowed in the window. |
 | `RateLimit-Remaining` | Requests left in the current window. |
-| `RateLimit-Reset` | Seconds until the window resets. |
+| `RateLimit-Reset` | When the window resets, as a **Unix timestamp in seconds**. |
+
+<Warning>
+  `RateLimit-Reset` is an absolute time, not a countdown. Subtract the current time
+  to get the wait: `waitSeconds = RateLimit-Reset - now`. Sleeping for the raw value
+  parks your integration for decades.
+</Warning>
 
 ## When you go over
 
-You get a `429` with `code: "RATE_LIMITED"`. Wait for `RateLimit-Reset` seconds and
-retry.
+You get a `429` with `code: "RATE_LIMITED"`. Wait until `RateLimit-Reset` and retry.
 
 ```json
 {
-  "message": "Too many requests",
+  "message": "Too Many Requests",
   "error": {
-    "message": "Too many requests",
+    "message": "Too Many Requests",
     "code": "RATE_LIMITED",
     "requestId": "b0f4c8e2-1f3a-4c19-9d6e-7c8b2a5f1e40"
   },
@@ -44,7 +50,7 @@ retry.
 Most integrations that hit the limit are making one request per record. Two habits
 fix that:
 
-- **Ask for more per page.** `pageSize` defaults to 50. Raising it means fewer
+- **Ask for more per page.** `pageSize` defaults to 100. Raising it means fewer
   round-trips for the same data.
 - **Resolve ids in one call.** Instead of a `GET /worker/{id}` per row, join the
   table or send one `POST /worker/query` with every id you need. See

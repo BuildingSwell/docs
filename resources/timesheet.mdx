@@ -31,12 +31,12 @@ Every property the API returns for a timesheet record.
 | `endDate` | date-time \| null | When the record ended, in UTC. `null` means it is still open. Read-only. |
 | `deliverableId` | UUID \| null | Deliverable the time was logged against. Populated for `deliverable_work_session` rows only, and `null` for `attendance`. Read-only. |
 | `shiftWorkHours` | object \| null | The shift the record was worked against. Break times are local wall-clock, not UTC. Read-only. |
-| `breakTimeInSec` | integer \| null | Unpaid break seconds that fall inside this record's start/end window, computed by the database on every read. Read-only: it cannot be written, and it is `0` while the record is still open. |
+| `breakTimeInSec` | integer \| null | Unpaid break seconds that fall inside this record's start/end window. The database derives it whenever the record is written, from `startDate`, `endDate`, and `shiftWorkHours`. Read-only: it cannot be written, and it is `0` while the record is still open. |
 | `isEdited` | boolean | `true` when someone has edited the record by hand. Read-only. |
 | `lastUpdatedBy` | UUID \| null | Who last changed the record. Read-only. |
 | `metadata` | object | Free-form key-value store. No key is guaranteed to be present, and a missing key is not the same as a `null` one. See the resource guide for which paths populate `costCode` and `unionCode`. Read-only. |
 | `externalSource` | string \| null | System the record came from, for example `quickbase`. Read-only. |
-| `externalSync` | string | Sync state for the external system: `synced`, `not synced`, or `none`. Read-only. |
+| `externalSync` | string | Sync state for the external system. Free-form text, not an enum: `synced`, `not synced`, `not_synced`, `none`, and the Quickbase job's `synced start date` / `synced start and end date` all occur in real data. Match loosely rather than on an exact value. Read-only. |
 | `stageId` | UUID \| null | Always `null`. Kept in the shape for backward compatibility. Read-only. |
 | `buildOrderId` | UUID \| null | Always `null`. Kept in the shape for backward compatibility. Read-only. |
 | `overheadId` | UUID \| null | Always `null`. Kept in the shape for backward compatibility. Read-only. |
@@ -94,8 +94,10 @@ start-to-end window. Paid time for a record is therefore:
 paidSeconds = (endDate - startDate) - breakTimeInSec
 ```
 
-The value is computed by the database on every read, from the `breaks` array in
-`shiftWorkHours`. You cannot write it, and patching `breakTimeInSec` has no effect.
+The database derives the value from the `breaks` array in `shiftWorkHours` whenever
+the record is written, and stores it. You cannot write it, and patching
+`breakTimeInSec` has no effect. Editing a record's times or shift re-derives it;
+nothing else does.
 
 ### The carve-out rule
 

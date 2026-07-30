@@ -296,7 +296,7 @@ PATCH /deliverable/<id>
 
 When you archive:
 
-- `identifier` gets an ` - (archived)` suffix.
+- `identifier` gets an ` - (archived <timestamp>)` suffix, where `<timestamp>` is the archive time in epoch milliseconds. Match it with a pattern, not a literal string.
 - `archivedAt` is stamped with the current time.
 - Archiving cascades to every node beneath the one you archive, and then re-rolls the parent's times and progress, because removing the last incomplete step can make a stage `done`. Restoring cascades the same way and re-rolls again.
 

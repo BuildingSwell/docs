@@ -38,10 +38,14 @@ Content-Type: application/json
 
 Three things happen when a record is archived:
 
-- `archivedAt` is stamped with the current time, and cleared again on restore.
-- The record's name or identifier is given an ` - (archived)` suffix so it stops
-  colliding with your active records. Restoring strips the suffix, and picks the
-  next free variant if something has taken the original name meanwhile.
+- The record's name or identifier is given an ` - (archived <timestamp>)` suffix so
+  it stops colliding with your active records, where `<timestamp>` is the archive
+  time in epoch milliseconds. Restoring strips the suffix, and picks the next free
+  variant if something has taken the original name meanwhile. Match the suffix with
+  a pattern rather than a literal string.
+- `archivedAt` is stamped with the current time, and cleared again on restore, for
+  the resources that carry the field. Each resource page lists its own fields:
+  People and Stages have `isArchived` but no `archivedAt`.
 - Archived records drop out of list results.
 
 That last point catches people out. Filters default to `isArchived eq false`, so
@@ -50,6 +54,12 @@ ask for archived records explicitly when you want them:
 ```http
 GET /project?isArchived=true
 ```
+
+<Note>
+  People are the exception: archived people are **not** filtered out of
+  `GET /worker` by default. Pass `isArchived=false` explicitly when you only want
+  active people.
+</Note>
 
 ### Archiving in bulk
 
@@ -75,8 +85,8 @@ POST /deliverable/restore/batch
 ```
 
 <Note>
-  Not every resource is archivable. Work sessions, documents, comments, and QC
-  records have no `isArchived` field, so for those the only removal is a delete.
+  Not every resource is archivable. Work sessions, documents, and QC records have
+  no `isArchived` field, so for those the only removal is a delete.
 </Note>
 
 ## What each delete actually does
@@ -88,10 +98,9 @@ first, some are refused outright.
 | -------- | ----------------------------------- |
 | [Project](/resources/project) | Fails with `409` in practice. Every project owns a Jobsite, and that link is `ON DELETE RESTRICT`. Archive instead. |
 | [Deliverable](/resources/deliverable) | Removes the node **and its whole subtree**. Relinks work sessions and QC entries onto the nearest surviving ancestor first. Refused with `400` when there is no ancestor and the subtree has time or QC on it. |
-| [Stage](/resources/stage) | Removes the station. Deliverable stage nodes keep a `data.stageId` that no longer resolves, since that link is JSON rather than a foreign key. |
+| [Stage](/resources/stage) | Fails with `409` whenever a team or a route step is still assigned to the station. When it does go through, deliverable stage nodes keep a `data.stageId` that no longer resolves, since that link is JSON rather than a foreign key. |
 | [Work session](/resources/deliverable-work-sessions) | Removes the session and its hours. No archive exists for sessions. |
 | [Dependency](/resources/deliverable-dependencies) | Removes the link and re-rolls the successor's dates. Both deliverables stay. |
-| [Comment](/resources/comment) | Removes the row and its replies. The app instead soft-deletes by setting `deletedAt`. |
 | [Document](/resources/document) | Removes the document record. |
 | [QC inspection set](/resources/qc-inspection-set) | Removes the set and the inspections under it, which is your QC record for that work. |
 | [QC template](/resources/qc-template) | Fails with `409` while any inspection set still references the version. |
@@ -129,8 +138,9 @@ Archive the order instead.
 ## Bulk delete does not exist
 
 `DELETE /<resource>/bulk` returns `403` on every resource. A broad filter can never
-wipe out a table in one call, by design. Delete records one at a time, or archive
-them in bulk.
+wipe out a table in one call, by design. Archive them in bulk instead, or delete
+them one at a time on the resources where a single delete is allowed at all. People
+are not one of them: `DELETE /worker/{id}` returns `403` too.
 
 ## Why a delete comes back as 409
 
@@ -146,9 +156,10 @@ you are deleting, and the database is protecting it:
 }
 ```
 
-The two you will actually hit are projects, which always own a Jobsite, and QC
-template versions that inspection sets still reference. In both cases the answer is
-to archive, or to remove the referencing records first.
+The three you will actually hit are projects, which always own a Jobsite, stations
+that a team or route step is still assigned to, and QC template versions that
+inspection sets still reference. In every case the answer is to archive, or to
+remove the referencing records first.
 
 ## Picking between them
 

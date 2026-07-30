@@ -84,7 +84,6 @@
               "resources/deliverable",
               "resources/deliverable-dependencies",
               "resources/deliverable-work-sessions",
-              "resources/comment",
               "resources/document",
               "resources/qc-inspection-set",
               "resources/qc-template",
@@ -227,25 +226,6 @@
               "PUT /deliverable/dependencies/bulk",
               "DELETE /deliverable/dependencies/bulk",
               "GET /deliverable/dependencies/{id}/hierarchy"
-            ]
-          },
-          {
-            "group": "Comments",
-            "openapi": "openapi.yaml",
-            "pages": [
-              "GET /comment",
-              "POST /comment",
-              "GET /comment/{id}",
-              "PATCH /comment/{id}",
-              "PUT /comment/{id}",
-              "DELETE /comment/{id}",
-              "GET /comment/count",
-              "POST /comment/count",
-              "POST /comment/query",
-              "POST /comment/group-and-count",
-              "PATCH /comment/bulk",
-              "PUT /comment/bulk",
-              "DELETE /comment/bulk"
             ]
           },
           {

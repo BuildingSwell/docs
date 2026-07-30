@@ -88,9 +88,13 @@ When you restore, the suffix comes off, and a name an active person has since ta
   An archived person is read-only. Any `PATCH` other than the restore itself comes back as `400`.
 </Warning>
 
-Archived records drop out of list results by default. Ask for them with an explicit filter:
+Unlike every other archivable resource, archived people are **not** filtered out of list results. `GET /worker` returns active and archived people together, so filter explicitly:
 
 ```http
+# Active people only
+GET /worker?isArchived=false
+
+# Archived people only
 GET /worker?isArchived=true
 ```
 

@@ -106,7 +106,7 @@ PATCH /project/<id>
 
 When you archive:
 
-- `name` and `identifier` both get an ` - (archived)` suffix so they stop colliding with your active projects.
+- `name` and `identifier` both get an ` - (archived <timestamp>)` suffix, where `<timestamp>` is the archive time in epoch milliseconds, so they stop colliding with your active projects. Match the suffix with a pattern, not a literal string.
 - `archivedAt` is stamped with the current time.
 
 When you restore, the suffix comes off. If an active project has taken the original name or identifier in the meantime, the next free variant is used instead, for example `Warehouse A (1)`.

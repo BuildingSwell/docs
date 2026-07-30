@@ -27,7 +27,7 @@ Every property the API returns for a work session.
 | `isEdited` | boolean | `true` when someone has edited the session by hand. Defaults to `false`. |
 | `lastUpdatedBy` | UUID \| null | Who last changed the session. |
 | `shiftWorkHours` | object \| null | The shift the record was worked against. Break times are local wall-clock, not UTC. |
-| `breakTimeInSec` | integer \| null | Unpaid break seconds that fall inside this record's start/end window, computed by the database on every read. Read-only: it cannot be written, and it is `0` while the record is still open. |
+| `breakTimeInSec` | integer \| null | Unpaid break seconds that fall inside this record's start/end window. The database derives it whenever the record is written, from `startDate`, `endDate`, and `shiftWorkHours`. Read-only: it cannot be written, and it is `0` while the record is still open. |
 | `externalSource` | string \| null | System the session came from, for example `quickbase`. |
 | `externalSync` | string | Sync state for the external system. Defaults to `not synced`. |
 | `metadata` | object | Free-form key-value store. No key is guaranteed to be present, and a missing key is not the same as a `null` one. See the resource guide for which paths populate `costCode` and `unionCode`. |

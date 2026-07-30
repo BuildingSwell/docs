@@ -61,7 +61,9 @@ Everything else in the table above is set by BuildingSwell.
 
   Permanently removes the station. This is not the archive operation and it cannot be undone.
 
-  Deliverable stage nodes point at a station through `data.stageId`, which is a JSON value rather than a foreign key, so the database will not stop you. Those nodes keep an id that no longer resolves, and any QC entry referencing the station has its `stageId` set to `null`. Archive instead unless you are certain nothing points here.
+  In practice this fails with `409` whenever a team or a route step is still assigned to the station, because those links are `ON DELETE NO ACTION`. Reassign them first, or archive the station instead.
+
+When the delete does go through, deliverable stage nodes are not protected: they point at a station through `data.stageId`, which is a JSON value rather than a foreign key, so those nodes keep an id that no longer resolves. Any QC entry referencing the station has its `stageId` set to `null`.
 </Warning>
 
 See [archiving and deleting](/guides/archiving-and-deleting) for the full picture across resources.
