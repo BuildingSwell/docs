@@ -55,11 +55,9 @@ ask for archived records explicitly when you want them:
 GET /project?isArchived=true
 ```
 
-<Note>
-  People are the exception: archived people are **not** filtered out of
-  `GET /worker` by default. Pass `isArchived=false` explicitly when you only want
-  active people.
-</Note>
+This holds for every archivable resource, People included. An explicit
+top-level `isArchived` in your query replaces the default rather than adding to
+it, so a single request returns either active or archived records, never both.
 
 ### Archiving in bulk
 

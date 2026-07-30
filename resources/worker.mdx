@@ -36,7 +36,7 @@ Every property the API returns for a person.
 | `customerIdentifier` | string | Your own identifier for this person, for example an employee number. Defaults to an empty string. Defaults to `""`. |
 | `teamId` | UUID \| null | Team the person belongs to. |
 | `status` | enum | Employment status. One of `active` \| `inactive` \| `terminated`. Defaults to `active`. |
-| `isArchived` | boolean | Archived people are kept so historical ids still resolve. Defaults to `false`. |
+| `isArchived` | boolean | Archived people are hidden from list results unless you ask for them. They are never deleted, so historical ids still resolve. Defaults to `false`. |
 | `exemptFromAssignments` | boolean | `true` to leave the person out of assignment planning. Defaults to `false`. |
 | `unionCode` | string \| null | Labor or union classification code. |
 | `qbBadgeLink` | string \| null | QuickBase badge link, used by that integration. |
@@ -88,15 +88,17 @@ When you restore, the suffix comes off, and a name an active person has since ta
   An archived person is read-only. Any `PATCH` other than the restore itself comes back as `400`.
 </Warning>
 
-Unlike every other archivable resource, archived people are **not** filtered out of list results. `GET /worker` returns active and archived people together, so filter explicitly:
+Archived people drop out of reads, the same as every other archivable resource. `GET /worker` returns active people only, so ask for archived ones explicitly:
 
 ```http
-# Active people only
-GET /worker?isArchived=false
+# Active people (the default)
+GET /worker
 
 # Archived people only
 GET /worker?isArchived=true
 ```
+
+An explicit `isArchived` replaces the default instead of adding to it, so one request returns active or archived people, never both. Reading an archived person by id needs the flag too: a plain `GET /worker/{id}` on an archived person comes back `404`, so resolve them through the list endpoint with `?isArchived=true`.
 
 ## Deleting
 
@@ -111,15 +113,20 @@ See [archiving and deleting](/guides/archiving-and-deleting) for how this compar
 ## Common requests
 
 ```bash
-# Build an id -> name map, including archived people so old ids still resolve
+# Build an id -> name map. Two calls: archived people are excluded by default,
+# and you need them too if old ids are to resolve.
 GET /worker
+GET /worker?isArchived=true
 
-# Resolve a specific set of ids
+# Resolve a specific set of ids, archived people included
 POST /worker/query
 { "id": ["<uuid>", "<uuid>"], "select": ["id", "name"] }
 
+POST /worker/query
+{ "id": ["<uuid>", "<uuid>"], "isArchived": true, "select": ["id", "name"] }
+
 # Only people currently on the roster
-GET /worker?status=active&isArchived=false
+GET /worker?status=active
 
 # Look someone up by your own identifier
 GET /worker?customerIdentifier=E12345
