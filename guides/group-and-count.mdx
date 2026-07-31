@@ -71,3 +71,47 @@ curl -X POST "https://app.buildingswell.com/api/v2/deliverable/group-and-count" 
   `groupByField` is required, and it only accepts field-name characters. A value
   with anything else in it is rejected with `400`.
 </Note>
+
+## Grouping from a list endpoint
+
+`group-and-count` is the supported way to group, and it is the right tool when you
+want counts. List endpoints also accept a `groupBy` parameter, which is what you
+need for sums, averages, and other aggregates.
+
+A grouped read must carry a `select` naming the grouped fields and the aggregates
+you want, because everything a grouped query returns has to be one or the other:
+
+```bash
+# OK — the only selected field is the one being grouped
+GET /timesheet?groupBy=workerId&select=workerId
+
+# 400 — no select at all, so every column would come back un-grouped
+GET /timesheet?groupBy=workerId
+
+# 400 — startDate is neither grouped nor aggregated
+GET /timesheet?groupBy=workerId&select=workerId&select=startDate
+```
+
+Aggregates are objects, so they only fit in a `POST /{resource}/query` body:
+
+```json
+{
+  "groupBy": "workerId",
+  "select": ["workerId", { "aggregate": "COUNT", "alias": "sessions" }]
+}
+```
+
+Each aggregate takes an `aggregate` function, an `alias` to return it under, and a
+`field` for every function except `COUNT`. The functions are `COUNT`,
+`COUNT_DISTINCT`, `SUM`, `MIN`, `MAX`, and `AVG`.
+
+Two limits are worth knowing before you build on this:
+
+- `groupBy` does not combine with a `join` that selects fields — those come back
+  as un-grouped expressions. Group on the resource's own fields instead.
+- Some resources always project computed or joined fields, `deliverable` among
+  them, so `groupBy` is refused there with a `400`. Use
+  `POST /deliverable/group-and-count`, or the domain-aware
+  [`POST /deliverable/groups`](/resources/deliverable#group-by-a-domain-dimension).
+
+Each of these is a `400` that names the field or resource at fault.

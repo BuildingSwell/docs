@@ -13,8 +13,8 @@ query is too long for a URL.
 GET /project?page=1&pageSize=100
 ```
 
-- `page` starts at `1`, and defaults to `1`. Do not send `page=0`: it is not
-  rejected cleanly, it produces a negative offset and fails with a `500`.
+- `page` starts at `1`, and defaults to `1`. Pages are 1-based, so `page=0` is
+  rejected with a `400`.
 - `pageSize` defaults to `100` when you send no pagination parameters at all. Send
   it explicitly rather than relying on the default, which differs between the
   standard endpoints and `/timesheet`.
