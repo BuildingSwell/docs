@@ -43,7 +43,7 @@ Every property the API returns for a deliverable.
 | `durationSec` | integer | Total duration, in seconds. Defaults to `0`. |
 | `peopleNum` | integer | How many people the node is planned for. Defaults to `1`. |
 | `data` | object | Per-concept fields. Which keys apply depends on `type`: a stage node needs `stageId`, an order needs `projectId`, and so on. See the domain concepts guide for the full table. |
-| `costCode` | string \| null | Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`. |
+| `costCode` | string \| null | Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`. Stored as a plain string and not validated against the [cost code list](/resources/codes). |
 | `schedule` | object \| null | Scheduled window for the node. Present on `order` nodes only. Read-only. |
 | `progress` | object \| null | Progress for the node. Present on `order` nodes only. Write it through the progress action endpoint rather than by patching this object. Read-only. |
 | `computed` | object | Values BuildingSwell derives from the tree on every read. All read-only: anything you send here is ignored. |

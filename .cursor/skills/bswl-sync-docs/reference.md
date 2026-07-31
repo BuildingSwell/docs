@@ -34,7 +34,8 @@ Documented in this site (`PUBLIC_MOUNTS` in the extract script):
 ```
 deliverable, project, comment, notification,
 qc-inspection-set, qc-template, stage, document, note,
-timesheet, worker, role, organization-member, api-key, concepts
+timesheet, worker, role, organization-member, api-key, concepts,
+cost-code, union-code, per-diem-code
 ```
 
 **Internal** — mounted in `v2.routes.ts` but out of scope for public docs:
@@ -74,11 +75,22 @@ Given `buildModelRouter({ readOnly, enableImportExport, enableJsonImportExport }
 | GET | `/export/json` | When `enableJsonImportExport: true` |
 | POST | `/import/json` | When `enableJsonImportExport: true` |
 
-`DELETE /bulk` is never registered (globally forbidden).
+`DELETE /bulk` is never registered by the factory (globally forbidden). `code/router.ts`
+registers its own `DELETE /bulk` that returns `403` before the factory mounts — same
+outcome, but it does show up in the extracted surface.
 
 ### readOnly resources
 
 `timesheet` and insight models use hand-rolled or `readOnly: true` routers — only read paths above.
+
+## Code lists
+
+`v2/features/code/router.ts` exports three routers from one `buildCodeRouter`
+factory — `cost_code`, `union_code`, `per_diem_code` — mounted at `/cost-code`,
+`/union-code`, `/per-diem-code`. Identical shape, separate permission subjects,
+documented together in `resources/codes.mdx`. Codes are referenced by **value**
+(`worker.unionCode`, `deliverable.costCode`, work-session `metadata.costCode`),
+never by id, so renames do not cascade.
 
 ## Nested deliverable routers
 
@@ -156,6 +168,9 @@ When the extract script flags these, do not add them unless product asks to docu
 | `organization-member` | `/organization-member` | `resources/organization-member.mdx` |
 | `api-key` | `/api-key` | `resources/api-key.mdx` |
 | `concepts` | `/concepts` | `concepts/overview.mdx` |
+| `cost-code` | `/cost-code` | `resources/codes.mdx` |
+| `union-code` | `/union-code` | `resources/codes.mdx` |
+| `per-diem-code` | `/per-diem-code` | `resources/codes.mdx` |
 
 ## OpenAPI conventions in this repo
 

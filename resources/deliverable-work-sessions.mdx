@@ -76,6 +76,10 @@ you want:
 assigning someone to a deliverable, and it is set to that person's `unionCode` or
 `null`. A session you create with a direct `POST` has no `unionCode` key at all.
 
+Both are copies of a value, taken at the moment the session was created. They are
+not links into the [code lists](/resources/codes), so editing or deleting a code
+later leaves every existing session untouched.
+
 ## Break time
 
 `breakTimeInSec` is computed by the database from `shiftWorkHours.breaks`, carving

@@ -1,0 +1,144 @@
+---
+title: "Codes"
+description: "Cost, union, and per diem code lists."
+---
+
+BuildingSwell keeps three code lists: **cost codes**, **union codes**, and **per
+diem codes**. Each is a flat list of short values you reuse across records, such
+as `WH-A` for a warehouse job or `LOC-123` for a union local.
+
+The three lists have identical shape and behavior, and each gets its own set of
+endpoints:
+
+| List | Endpoints |
+| ---- | --------- |
+| Cost codes | `/cost-code` |
+| Union codes | `/union-code` |
+| Per diem codes | `/per-diem-code` |
+
+They are independent of each other. The same value can exist as a cost code, a
+union code, and a per diem code at the same time, and granting access to one list
+grants nothing on the other two.
+
+**Search columns:** `code`, `description`
+
+Standard CRUD applies, minus bulk delete. See
+[standard endpoints](/guides/standard-endpoints).
+
+## Codes are referenced by value
+
+This is the one thing to understand before you write to these lists. A record does
+not point at a code by id — it stores the code **string**:
+
+| Field | List |
+| ----- | ---- |
+| [`project.costCode`](/resources/project) | Cost codes |
+| [`stage.costCode`](/resources/stage) | Cost codes |
+| [`deliverable.costCode`](/resources/deliverable) | Cost codes |
+| [work session `metadata.costCode`](/resources/deliverable-work-sessions) | Cost codes |
+| [`worker.unionCode`](/resources/worker) | Union codes |
+| [work session `metadata.unionCode`](/resources/deliverable-work-sessions) | Union codes |
+
+There is no foreign key behind any of them. Two consequences follow, and both
+matter for an integration:
+
+<Warning>
+  **Renaming a code does not rewrite the records that use it.** `PATCH` the `code`
+  field and every record still carries the old string. Nothing errors, and nothing
+  is migrated for you.
+
+  **Writes to those fields are not validated against these lists.** You can set
+  `worker.unionCode` to a value that is not a union code, and the API accepts it.
+  The lists are what the app offers in its pickers, not a constraint.
+</Warning>
+
+Per diem codes are the exception to the table above: they are referenced from a
+person's per diem entries, which the v2 public API does not expose. You can manage
+the list here, but nothing in this API reads from it.
+
+## Fields
+
+Every property the API returns for a code, on all three lists.
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Unique id. Generated on create unless you supply one. Server-managed. |
+| `organizationId` | UUID | Your organization. Taken from the API key, never from the request body. Read-only. |
+| `code` | string | The code value itself, for example `LOC-123`. Trimmed on write, and unique within your organization for this list. **Required on create.** |
+| `description` | string \| null | What the code is for. Trimmed on write. Defaults to `null`. |
+| `isActive` | boolean | Whether the code is still offered for new work. Defaults to `true`. |
+| `createdAt` | date-time | When the record was created. Server-managed. |
+| `updatedAt` | date-time | When the record last changed. Server-managed. |
+
+<Note>
+  Codes carry no `name`, no `identifier`, and no `isArchived`. They are keyed by
+  `code` within your organization, and `isActive` is the only lifecycle field.
+</Note>
+
+## What you can write
+
+Everything else in the table above is set by BuildingSwell.
+
+| Field | On create | On update |
+| ----- | --------- | --------- |
+| `code` | Required | Yes |
+| `description` | Optional | Yes |
+| `isActive` | Optional | Yes |
+
+A duplicate `code` within the same list is rejected with `409`:
+
+```bash
+curl -X POST 'https://app.buildingswell.com/api/v2/union-code' \
+  -H 'X-API-Key: YOUR_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{ "code": "LOC-123", "description": "Local 123" }'
+```
+
+## Retiring a code
+
+`isActive` is how you take a code out of circulation without touching the records
+that already carry it. Retire one code, or a filtered batch in a single call:
+
+```bash
+curl -X PATCH 'https://app.buildingswell.com/api/v2/cost-code/bulk?code=OLD-1&code=OLD-2' \
+  -H 'X-API-Key: YOUR_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{ "isActive": false }'
+```
+
+The filter goes in the **query string**, and a request with no filter is rejected
+with `400` rather than retiring the whole list.
+
+Inactive codes are still returned by `GET /cost-code`. Filter on `isActive` when
+you only want the live ones:
+
+```bash
+curl 'https://app.buildingswell.com/api/v2/cost-code?isActive=true' \
+  -H 'X-API-Key: YOUR_KEY'
+```
+
+## Deleting
+
+<Warning>
+  **`DELETE /cost-code/{id}` and its siblings are destructive.**
+
+  Permanently removes the entry from the list. There is no archive flag on a code
+  and it cannot be undone.
+
+  Nothing else breaks, and nothing else changes either: records that already carry
+  the value keep it, because the reference is a plain string. The value simply
+  stops appearing in the list. Prefer `isActive: false` unless you are cleaning up
+  a code that was typed by mistake.
+</Warning>
+
+Bulk delete is not available. `DELETE /cost-code/bulk` always returns `403`, on all
+three lists, so a broad filter can never empty a list in one call. See
+[archiving and deleting](/guides/archiving-and-deleting) for the full picture
+across resources.
+
+## Permissions
+
+Each list is its own permission subject — `cost_code`, `union_code`, and
+`per_diem_code` — and access fails closed. A key whose role was never granted a
+list gets `403` on reads of that list, not an empty page. See
+[roles](/resources/role) for how statements are put together.

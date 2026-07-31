@@ -33,6 +33,9 @@ const PUBLIC_MOUNTS = new Set([
   "organization-member",
   "api-key",
   "concepts",
+  "cost-code",
+  "union-code",
+  "per-diem-code",
 ]);
 
 /** Endpoints implemented in code but intentionally omitted from public docs */
@@ -85,6 +88,11 @@ const MOUNT_TO_ROUTER = {
   "organization-member": "v2/features/organization-member/router.ts",
   "api-key": "v2/features/api-key/router.ts",
   concepts: "v2/features/concepts/router.ts",
+  // One file exports all three code routers; each is the same factory
+  // router bound to a different table, so the mount prefix is what differs.
+  "cost-code": "v2/features/code/router.ts",
+  "union-code": "v2/features/code/router.ts",
+  "per-diem-code": "v2/features/code/router.ts",
 };
 
 const HTTP_METHODS = ["get", "post", "put", "patch", "delete"];
