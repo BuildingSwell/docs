@@ -44,6 +44,8 @@ tags:
   description: Your workforce roster. Called People in the app and `worker` in the API.
 - name: Timesheets
   description: Read-only view over attendance and work sessions.
+- name: Codes
+  description: Cost, union, and per diem code lists. Referenced by value, not by id.
 - name: Roles
   description: Permission roles, and the statements that make them up.
 - name: Users
@@ -3978,6 +3980,1134 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
+  /cost-code:
+    get:
+      tags:
+      - Codes
+      summary: List cost codes
+      description: |-
+        List and filter cost codes. Supports pagination, sorting, field selection, search, and filters.
+
+        Inactive codes are returned like any other. Filter on `isActive` when you only want the ones still in use.
+
+        Full-text `search` covers `code` and `description`.
+      parameters:
+      - $ref: '#/components/parameters/page'
+      - $ref: '#/components/parameters/pageSize'
+      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/select'
+      - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: A page of cost codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+      - Codes
+      summary: Create a cost code
+      description: |-
+        Create one cost code, or several at once by sending an array.
+
+        `code` is trimmed and must be unique within your organization for this list; a duplicate is rejected with `409`. The three lists are independent, so the same value can exist as a cost code, a union code, and a per diem code at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - $ref: '#/components/schemas/CodeCreate'
+              - type: array
+                items:
+                  $ref: '#/components/schemas/CodeCreate'
+      responses:
+        '200':
+          description: The created cost code. An array request returns `values` instead of `value`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/CodeSingleResponse'
+                - $ref: '#/components/schemas/CodeMultiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /cost-code/count:
+    get:
+      tags:
+      - Codes
+      summary: Count cost codes
+      description: Count the cost codes matching your filters.
+      parameters:
+      - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: The matching count.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+      - Codes
+      summary: Count cost codes (POST)
+      description: |-
+        Same as `GET /cost-code/count`, with the filters in the request body. Use this when your filter is too long for a URL.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: The matching count.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /cost-code/query:
+    post:
+      tags:
+      - Codes
+      summary: Query cost codes
+      description: |-
+        Same as `GET /cost-code`, with the query in the request body. Use this when your filter or `select` list is too long for a URL.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: A page of cost codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /cost-code/group-and-count:
+    post:
+      tags:
+      - Codes
+      summary: Group and count cost codes
+      description: |-
+        Group cost codes by one or more fields and count each group. Accepts the same filters as the list endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupAndCountBody'
+      responses:
+        '200':
+          description: One row per group.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupAndCountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /cost-code/bulk:
+    patch:
+      tags:
+      - Codes
+      summary: Update many cost codes
+      description: |-
+        Apply one set of changes to every cost code matching your filter. This is how you retire a batch of codes at once, with `{ "isActive": false }`.
+
+        The filter must be in the **query string**. A filter in the body is ignored, and a request with no filter is rejected with `400` so you cannot update the whole list by accident.
+      parameters:
+      - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/filter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeUpdate'
+      responses:
+        '200':
+          description: The updated cost codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeMultiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    put:
+      tags:
+      - Codes
+      summary: Upsert many cost codes
+      description: |-
+        Insert or update many cost codes in one call. `update` is required: it lists the columns to overwrite when a row with a conflicting unique key already exists.
+
+        Matching is by `id`, not by `code`. An entry whose `code` is already taken by a different id is rejected with `409`, so this is not a way to reseed a list from code values alone.
+      parameters:
+      - $ref: '#/components/parameters/update'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CodeCreate'
+      responses:
+        '200':
+          description: The upserted cost codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeMultiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      tags:
+      - Codes
+      summary: Delete many cost codes (not available)
+      description: |-
+        Not available on any resource. This route always returns `403`, so a broad filter can never wipe out a list in one call. Delete entries one at a time, or retire them in bulk with `PATCH /cost-code/bulk` and `{ "isActive": false }`.
+      responses:
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /cost-code/{id}:
+    get:
+      tags:
+      - Codes
+      summary: Get a cost code
+      description: Fetch one cost code by id.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/select'
+      responses:
+        '200':
+          description: The cost code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSingleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    patch:
+      tags:
+      - Codes
+      summary: Update a cost code
+      description: |-
+        Change one cost code. Only the fields you send are touched.
+
+        Renaming `code` does **not** rewrite the records that already carry the old value. Referenced by value from `project.costCode`, `stage.costCode`, `deliverable.costCode`, and work-session `metadata.costCode`. Those references are plain strings, so a rename leaves them pointing at a value that is no longer in the list.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeUpdate'
+      responses:
+        '200':
+          description: The updated cost code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSingleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    put:
+      tags:
+      - Codes
+      summary: Upsert a cost code
+      description: |-
+        Insert the cost code, or update it when a row with a conflicting unique key already exists. `update` is required and lists which columns to overwrite on conflict.
+
+        Matching is by `id` — the one in the path. If the `code` you send already belongs to a different entry, the request is rejected with `409`.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeCreate'
+      responses:
+        '200':
+          description: The upserted cost code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSingleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      tags:
+      - Codes
+      summary: Delete a cost code
+      description: |-
+        **Destructive.** Permanently removes the entry from the list. There is no archive flag on a code and this cannot be undone.
+
+        Nothing else breaks, and nothing else changes either. Referenced by value from `project.costCode`, `stage.costCode`, `deliverable.costCode`, and work-session `metadata.costCode`. Those are plain string values with no foreign key behind them, so every record that already carries this code keeps it — the value simply stops appearing in the list. To retire a code while keeping it valid on existing records, `PATCH` it with `{ "isActive": false }` instead.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted. The response has no body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /union-code:
+    get:
+      tags:
+      - Codes
+      summary: List union codes
+      description: |-
+        List and filter union codes. Supports pagination, sorting, field selection, search, and filters.
+
+        Inactive codes are returned like any other. Filter on `isActive` when you only want the ones still in use.
+
+        Full-text `search` covers `code` and `description`.
+      parameters:
+      - $ref: '#/components/parameters/page'
+      - $ref: '#/components/parameters/pageSize'
+      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/select'
+      - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: A page of union codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+      - Codes
+      summary: Create a union code
+      description: |-
+        Create one union code, or several at once by sending an array.
+
+        `code` is trimmed and must be unique within your organization for this list; a duplicate is rejected with `409`. The three lists are independent, so the same value can exist as a cost code, a union code, and a per diem code at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - $ref: '#/components/schemas/CodeCreate'
+              - type: array
+                items:
+                  $ref: '#/components/schemas/CodeCreate'
+      responses:
+        '200':
+          description: The created union code. An array request returns `values` instead of `value`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/CodeSingleResponse'
+                - $ref: '#/components/schemas/CodeMultiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /union-code/count:
+    get:
+      tags:
+      - Codes
+      summary: Count union codes
+      description: Count the union codes matching your filters.
+      parameters:
+      - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: The matching count.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+      - Codes
+      summary: Count union codes (POST)
+      description: |-
+        Same as `GET /union-code/count`, with the filters in the request body. Use this when your filter is too long for a URL.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: The matching count.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /union-code/query:
+    post:
+      tags:
+      - Codes
+      summary: Query union codes
+      description: |-
+        Same as `GET /union-code`, with the query in the request body. Use this when your filter or `select` list is too long for a URL.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: A page of union codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /union-code/group-and-count:
+    post:
+      tags:
+      - Codes
+      summary: Group and count union codes
+      description: |-
+        Group union codes by one or more fields and count each group. Accepts the same filters as the list endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupAndCountBody'
+      responses:
+        '200':
+          description: One row per group.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupAndCountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /union-code/bulk:
+    patch:
+      tags:
+      - Codes
+      summary: Update many union codes
+      description: |-
+        Apply one set of changes to every union code matching your filter. This is how you retire a batch of codes at once, with `{ "isActive": false }`.
+
+        The filter must be in the **query string**. A filter in the body is ignored, and a request with no filter is rejected with `400` so you cannot update the whole list by accident.
+      parameters:
+      - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/filter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeUpdate'
+      responses:
+        '200':
+          description: The updated union codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeMultiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    put:
+      tags:
+      - Codes
+      summary: Upsert many union codes
+      description: |-
+        Insert or update many union codes in one call. `update` is required: it lists the columns to overwrite when a row with a conflicting unique key already exists.
+
+        Matching is by `id`, not by `code`. An entry whose `code` is already taken by a different id is rejected with `409`, so this is not a way to reseed a list from code values alone.
+      parameters:
+      - $ref: '#/components/parameters/update'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CodeCreate'
+      responses:
+        '200':
+          description: The upserted union codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeMultiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      tags:
+      - Codes
+      summary: Delete many union codes (not available)
+      description: |-
+        Not available on any resource. This route always returns `403`, so a broad filter can never wipe out a list in one call. Delete entries one at a time, or retire them in bulk with `PATCH /union-code/bulk` and `{ "isActive": false }`.
+      responses:
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /union-code/{id}:
+    get:
+      tags:
+      - Codes
+      summary: Get a union code
+      description: Fetch one union code by id.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/select'
+      responses:
+        '200':
+          description: The union code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSingleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    patch:
+      tags:
+      - Codes
+      summary: Update a union code
+      description: |-
+        Change one union code. Only the fields you send are touched.
+
+        Renaming `code` does **not** rewrite the records that already carry the old value. Referenced by value from `worker.unionCode` and work-session `metadata.unionCode`. Those references are plain strings, so a rename leaves them pointing at a value that is no longer in the list.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeUpdate'
+      responses:
+        '200':
+          description: The updated union code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSingleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    put:
+      tags:
+      - Codes
+      summary: Upsert a union code
+      description: |-
+        Insert the union code, or update it when a row with a conflicting unique key already exists. `update` is required and lists which columns to overwrite on conflict.
+
+        Matching is by `id` — the one in the path. If the `code` you send already belongs to a different entry, the request is rejected with `409`.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeCreate'
+      responses:
+        '200':
+          description: The upserted union code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSingleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      tags:
+      - Codes
+      summary: Delete a union code
+      description: |-
+        **Destructive.** Permanently removes the entry from the list. There is no archive flag on a code and this cannot be undone.
+
+        Nothing else breaks, and nothing else changes either. Referenced by value from `worker.unionCode` and work-session `metadata.unionCode`. Those are plain string values with no foreign key behind them, so every record that already carries this code keeps it — the value simply stops appearing in the list. To retire a code while keeping it valid on existing records, `PATCH` it with `{ "isActive": false }` instead.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted. The response has no body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /per-diem-code:
+    get:
+      tags:
+      - Codes
+      summary: List per diem codes
+      description: |-
+        List and filter per diem codes. Supports pagination, sorting, field selection, search, and filters.
+
+        Inactive codes are returned like any other. Filter on `isActive` when you only want the ones still in use.
+
+        Full-text `search` covers `code` and `description`.
+      parameters:
+      - $ref: '#/components/parameters/page'
+      - $ref: '#/components/parameters/pageSize'
+      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/select'
+      - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: A page of per diem codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+      - Codes
+      summary: Create a per diem code
+      description: |-
+        Create one per diem code, or several at once by sending an array.
+
+        `code` is trimmed and must be unique within your organization for this list; a duplicate is rejected with `409`. The three lists are independent, so the same value can exist as a cost code, a union code, and a per diem code at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - $ref: '#/components/schemas/CodeCreate'
+              - type: array
+                items:
+                  $ref: '#/components/schemas/CodeCreate'
+      responses:
+        '200':
+          description: The created per diem code. An array request returns `values` instead of `value`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/CodeSingleResponse'
+                - $ref: '#/components/schemas/CodeMultiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /per-diem-code/count:
+    get:
+      tags:
+      - Codes
+      summary: Count per diem codes
+      description: Count the per diem codes matching your filters.
+      parameters:
+      - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: The matching count.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    post:
+      tags:
+      - Codes
+      summary: Count per diem codes (POST)
+      description: |-
+        Same as `GET /per-diem-code/count`, with the filters in the request body. Use this when your filter is too long for a URL.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: The matching count.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /per-diem-code/query:
+    post:
+      tags:
+      - Codes
+      summary: Query per diem codes
+      description: |-
+        Same as `GET /per-diem-code`, with the query in the request body. Use this when your filter or `select` list is too long for a URL.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryBody'
+      responses:
+        '200':
+          description: A page of per diem codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /per-diem-code/group-and-count:
+    post:
+      tags:
+      - Codes
+      summary: Group and count per diem codes
+      description: |-
+        Group per diem codes by one or more fields and count each group. Accepts the same filters as the list endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupAndCountBody'
+      responses:
+        '200':
+          description: One row per group.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupAndCountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /per-diem-code/bulk:
+    patch:
+      tags:
+      - Codes
+      summary: Update many per diem codes
+      description: |-
+        Apply one set of changes to every per diem code matching your filter. This is how you retire a batch of codes at once, with `{ "isActive": false }`.
+
+        The filter must be in the **query string**. A filter in the body is ignored, and a request with no filter is rejected with `400` so you cannot update the whole list by accident.
+      parameters:
+      - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/filter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeUpdate'
+      responses:
+        '200':
+          description: The updated per diem codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeMultiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    put:
+      tags:
+      - Codes
+      summary: Upsert many per diem codes
+      description: |-
+        Insert or update many per diem codes in one call. `update` is required: it lists the columns to overwrite when a row with a conflicting unique key already exists.
+
+        Matching is by `id`, not by `code`. An entry whose `code` is already taken by a different id is rejected with `409`, so this is not a way to reseed a list from code values alone.
+      parameters:
+      - $ref: '#/components/parameters/update'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/CodeCreate'
+      responses:
+        '200':
+          description: The upserted per diem codes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeMultiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      tags:
+      - Codes
+      summary: Delete many per diem codes (not available)
+      description: |-
+        Not available on any resource. This route always returns `403`, so a broad filter can never wipe out a list in one call. Delete entries one at a time, or retire them in bulk with `PATCH /per-diem-code/bulk` and `{ "isActive": false }`.
+      responses:
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /per-diem-code/{id}:
+    get:
+      tags:
+      - Codes
+      summary: Get a per diem code
+      description: Fetch one per diem code by id.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/select'
+      responses:
+        '200':
+          description: The per diem code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSingleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    patch:
+      tags:
+      - Codes
+      summary: Update a per diem code
+      description: |-
+        Change one per diem code. Only the fields you send are touched.
+
+        Renaming `code` does **not** rewrite the records that already carry the old value. Referenced by value from a person's per diem entries, which the v2 public API does not expose. Those references are plain strings, so a rename leaves them pointing at a value that is no longer in the list.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeUpdate'
+      responses:
+        '200':
+          description: The updated per diem code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSingleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    put:
+      tags:
+      - Codes
+      summary: Upsert a per diem code
+      description: |-
+        Insert the per diem code, or update it when a row with a conflicting unique key already exists. `update` is required and lists which columns to overwrite on conflict.
+
+        Matching is by `id` — the one in the path. If the `code` you send already belongs to a different entry, the request is rejected with `409`.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeCreate'
+      responses:
+        '200':
+          description: The upserted per diem code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeSingleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    delete:
+      tags:
+      - Codes
+      summary: Delete a per diem code
+      description: |-
+        **Destructive.** Permanently removes the entry from the list. There is no archive flag on a code and this cannot be undone.
+
+        Nothing else breaks, and nothing else changes either. Referenced by value from a person's per diem entries, which the v2 public API does not expose. Those are plain string values with no foreign key behind them, so every record that already carries this code keeps it — the value simply stops appearing in the list. To retire a code while keeping it valid on existing records, `PATCH` it with `{ "isActive": false }` instead.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Deleted. The response has no body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /role:
     get:
       tags:
@@ -5645,6 +6775,8 @@ components:
           type: string
           description: |-
             Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`.
+
+            Stored as a plain string. It is not validated against the cost code list, and renaming an entry in that list does not change this value.
           nullable: true
         createdAt:
           type: string
@@ -5702,6 +6834,8 @@ components:
           type: string
           description: |-
             Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`.
+
+            Stored as a plain string. It is not validated against the cost code list, and renaming an entry in that list does not change this value.
           nullable: true
         createdAt:
           type: string
@@ -5787,6 +6921,8 @@ components:
           type: string
           description: |-
             Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`.
+
+            Stored as a plain string. It is not validated against the cost code list, and renaming an entry in that list does not change this value.
           nullable: true
     ProjectSingleResponse:
       type: object
@@ -5841,6 +6977,8 @@ components:
           type: string
           description: |-
             Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`.
+
+            Stored as a plain string. It is not validated against the cost code list, and renaming an entry in that list does not change this value.
           nullable: true
         isArchived:
           type: boolean
@@ -5884,6 +7022,8 @@ components:
           type: string
           description: |-
             Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`.
+
+            Stored as a plain string. It is not validated against the cost code list, and renaming an entry in that list does not change this value.
           nullable: true
         isArchived:
           type: boolean
@@ -5920,6 +7060,8 @@ components:
           type: string
           description: |-
             Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`.
+
+            Stored as a plain string. It is not validated against the cost code list, and renaming an entry in that list does not change this value.
           nullable: true
         isArchived:
           type: boolean
@@ -6038,6 +7180,8 @@ components:
           type: string
           description: |-
             Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`.
+
+            Stored as a plain string. It is not validated against the cost code list, and renaming an entry in that list does not change this value.
           nullable: true
         schedule:
           type: object
@@ -6399,6 +7543,8 @@ components:
           type: string
           description: |-
             Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`.
+
+            Stored as a plain string. It is not validated against the cost code list, and renaming an entry in that list does not change this value.
           nullable: true
         createdAt:
           type: string
@@ -6485,6 +7631,8 @@ components:
           type: string
           description: |-
             Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`.
+
+            Stored as a plain string. It is not validated against the cost code list, and renaming an entry in that list does not change this value.
           nullable: true
     DeliverableSingleResponse:
       type: object
@@ -7557,7 +8705,10 @@ components:
           default: false
         unionCode:
           type: string
-          description: Labor or union classification code.
+          description: |-
+            Labor or union classification code.
+
+            Stored as a plain string. It is not validated against the union code list, and renaming an entry in that list does not change this value.
           nullable: true
         qbBadgeLink:
           type: string
@@ -7612,7 +8763,10 @@ components:
           default: false
         unionCode:
           type: string
-          description: Labor or union classification code.
+          description: |-
+            Labor or union classification code.
+
+            Stored as a plain string. It is not validated against the union code list, and renaming an entry in that list does not change this value.
           nullable: true
         qbBadgeLink:
           type: string
@@ -7661,7 +8815,10 @@ components:
           default: false
         unionCode:
           type: string
-          description: Labor or union classification code.
+          description: |-
+            Labor or union classification code.
+
+            Stored as a plain string. It is not validated against the union code list, and renaming an entry in that list does not change this value.
           nullable: true
         qbBadgeLink:
           type: string
@@ -7842,6 +8999,109 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Timesheet'
+        hasMore:
+          type: boolean
+          description: '`true` when another page is available.'
+    Code:
+      type: object
+      description: |-
+        One entry in a code list. Cost, union, and per diem codes are three separate lists that share this shape and behave identically.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique id. Generated on create unless you supply one.
+        organizationId:
+          type: string
+          format: uuid
+          description: Your organization. Taken from the API key, never from the request body.
+        code:
+          type: string
+          description: |-
+            The code value itself, for example `LOC-123`. Trimmed on write and unique within your organization for this list. This is the value that records reference, not the id.
+          minLength: 1
+        description:
+          type: string
+          description: What the code is for. Trimmed on write.
+          nullable: true
+        isActive:
+          type: boolean
+          description: |-
+            Whether the code is still offered for new work. Inactive codes stay valid on records that already carry them, and are still returned by the list endpoint unless you filter them out.
+          default: true
+        createdAt:
+          type: string
+          format: date-time
+          description: When the record was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the record last changed.
+    CodeCreate:
+      type: object
+      required:
+      - code
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique id. Generated on create unless you supply one.
+        code:
+          type: string
+          description: |-
+            The code value itself, for example `LOC-123`. Trimmed on write and unique within your organization for this list.
+          minLength: 1
+        description:
+          type: string
+          description: What the code is for. Trimmed on write. Defaults to `null`.
+          nullable: true
+        isActive:
+          type: boolean
+          description: Whether the code is still offered for new work. Defaults to `true`.
+          default: true
+        createdAt:
+          type: string
+          format: date-time
+          description: When the record was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the record last changed.
+    CodeUpdate:
+      type: object
+      description: Every field is optional. Only the fields you send are changed.
+      properties:
+        code:
+          type: string
+          description: |-
+            The code value itself. Renaming it does not rewrite the records that already carry the old value.
+          minLength: 1
+        description:
+          type: string
+          description: What the code is for. Trimmed on write.
+          nullable: true
+        isActive:
+          type: boolean
+          description: Whether the code is still offered for new work.
+    CodeSingleResponse:
+      type: object
+      properties:
+        value:
+          $ref: '#/components/schemas/Code'
+    CodeMultiResponse:
+      type: object
+      properties:
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/Code'
+    CodeListResponse:
+      type: object
+      properties:
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/Code'
         hasMore:
           type: boolean
           description: '`true` when another page is available.'

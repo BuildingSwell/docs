@@ -38,7 +38,7 @@ Every property the API returns for a person.
 | `status` | enum | Employment status. One of `active` \| `inactive` \| `terminated`. Defaults to `active`. |
 | `isArchived` | boolean | Archived people are hidden from list results unless you ask for them. They are never deleted, so historical ids still resolve. Defaults to `false`. |
 | `exemptFromAssignments` | boolean | `true` to leave the person out of assignment planning. Defaults to `false`. |
-| `unionCode` | string \| null | Labor or union classification code. |
+| `unionCode` | string \| null | Labor or union classification code. Stored as a plain string and not validated against the [union code list](/resources/codes). |
 | `qbBadgeLink` | string \| null | QuickBase badge link, used by that integration. |
 | `createdAt` | date-time | When the record was created. Server-managed. |
 | `updatedAt` | date-time | When the record last changed. Server-managed. |
