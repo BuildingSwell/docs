@@ -6527,7 +6527,7 @@ components:
     page:
       name: page
       in: query
-      description: 'Page to return, starting at 1. Do not send `page=0`: it produces a negative offset and fails with a `500`.'
+      description: 'Page to return, starting at 1. Pages are 1-based, so `page=0` is rejected with a `400`.'
       schema:
         type: integer
         minimum: 1
@@ -9436,8 +9436,13 @@ components:
           description: When the record last changed.
     OrganizationMemberUpdate:
       type: object
-      description: Every field is optional. Only the fields you send are changed.
+      description: |-
+        Every field is optional. Only the fields you send are changed. `email` is not updatable: it identifies the login and is owned by the identity provider.
       properties:
+        name:
+          type: string
+          minLength: 1
+          description: Display name. Written to the linked user account, so it comes back as `appUser.name` rather than on the membership.
         roleId:
           type: string
           format: uuid
@@ -9450,6 +9455,11 @@ components:
           - custom
           description: '`admin` grants everything. `custom` follows `roleId`.'
           default: custom
+        workerId:
+          type: string
+          format: uuid
+          description: Person record to link this user to. Pass `null` to unlink. Write-only — it is stored on the person, not on the membership.
+          nullable: true
     OrganizationMemberSingleResponse:
       type: object
       properties:

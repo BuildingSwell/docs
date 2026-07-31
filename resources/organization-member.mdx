@@ -50,6 +50,8 @@ POST /organization-member
 }
 ```
 
+Pass `name` as well to set the display name on a brand-new account.
+
 If no account exists for that email, one is created. Either way an invitation goes
 out and `appUser.status` stays `pending` until the person accepts.
 
@@ -61,8 +63,25 @@ POST /organization-member/<id>/invite/resend
 
 ## Update a membership
 
-`PATCH /organization-member/{id}` accepts `roleId`, `roleType`, and `workerId`.
-Pass `workerId: null` to unlink the [person](/resources/worker) record.
+`PATCH /organization-member/{id}` accepts `name`, `roleId`, `roleType`, and
+`workerId`. Pass `workerId: null` to unlink the [person](/resources/worker) record.
+
+`name` updates the display name on the linked user account, so one request is
+enough to correct a member's name:
+
+```http
+PATCH /organization-member/<id>
+
+{ "name": "Jake Smith" }
+```
+
+The new name comes back as `appUser.name`, since that is where it lives.
+
+<Warning>
+  **`email` cannot be changed.** It identifies the login and is owned by the
+  identity provider. Deleting and re-inviting the member creates a *new* account
+  rather than moving the existing one, so an email change is a support request.
+</Warning>
 
 ## Deactivate instead of deleting
 
@@ -91,9 +110,16 @@ Everything else in the table above is set by BuildingSwell.
 | Field | On create | On update |
 | ----- | --------- | --------- |
 | `appUserId` | Required | No |
+| `name` | Optional, new accounts only | Yes |
 | `roleId` | Optional | Yes |
 | `roleType` | Optional | Yes |
+| `workerId` | No | Yes |
 | `status` | Optional | No |
+
+`name` and `workerId` are not membership columns: `name` is written to the linked
+user account and read back as `appUser.name`, and `workerId` links the
+[person](/resources/worker) record. Neither appears on the membership itself.
+`email` is set once, on the invite, and cannot be changed afterwards.
 
 ## Deleting
 
