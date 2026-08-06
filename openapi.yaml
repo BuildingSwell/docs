@@ -7439,17 +7439,60 @@ components:
               type: boolean
               description: '`true` when any stage beneath this node has been reworked.'
               default: false
-            alertType:
-              type: string
-              enum:
-              - on-hold
-              - late
-              - at-risk
-              - no-risk
-              description: Highest-priority alert state for the node.
-            alertTypeOrdinal:
-              type: integer
-              description: '`alertType` as a sortable number: 0 no-risk, 1 at-risk, 2 late, 3 on-hold.'
+        currentStageIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: |
+            Also returned at the top level, with the same value as
+            `computed.currentStageIds`. Read it from `computed`, which is where it
+            is guaranteed to be.
+        currentPhaseNames:
+          type: array
+          items:
+            type: string
+          description: |
+            Also returned at the top level, with the same value as
+            `computed.currentPhaseNames`. Read it from `computed`.
+        combinedWorkerIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: |
+            Also returned at the top level, with the same value as
+            `computed.combinedWorkerIds`. Read it from `computed`.
+        combinedTagIds:
+          type: array
+          items:
+            type: string
+          description: |
+            Also returned at the top level, with the same value as
+            `computed.combinedTagIds`. Despite the name these are tag names, not
+            ids. Read it from `computed`.
+        alertType:
+          type: string
+          enum:
+          - on-hold
+          - late
+          - at-risk
+          - no-risk
+          description: |
+            Highest-priority alert state for the node. Derived on every read, and
+            returned at the top level rather than inside `computed`.
+        alertTypeOrdinal:
+          type: integer
+          description: |
+            `alertType` as a sortable number: 0 no-risk, 1 at-risk, 2 late,
+            3 on-hold. Sort on this rather than on `alertType`, whose values are
+            not alphabetical.
+        manHours:
+          type: string
+          description: |
+            Planned man-hours for the node: `peopleNum` x `durationSec`, in hours.
+            Returned as a decimal string with trailing zeros, not a number, so
+            parse it before doing arithmetic.
         createdAt:
           type: string
           format: date-time
@@ -8617,6 +8660,10 @@ components:
         name:
           type: string
           description: Template name.
+        description:
+          type: string
+          nullable: true
+          description: What the template is for.
         versionNumber:
           type: number
           description: Version number within the template.
@@ -8626,10 +8673,68 @@ components:
         requiresPassFail:
           type: boolean
           description: '`true` when the template ends in a pass/fail verdict rather than being questions-only.'
+        externallyFillable:
+          type: boolean
+          default: false
+          description: '`true` when the set can be filled by someone outside your organization.'
+        captureLocationOnSubmit:
+          type: boolean
+          default: false
+          description: "`true` when submitting a set records the submitter's location."
         questions:
-          type: object
-          description: The template's questions. Shape is set by the template editor.
+          type: array
           nullable: true
+          description: The template's questions, in the order they are shown.
+          items:
+            type: object
+            description: One question on the template.
+            properties:
+              id:
+                type: string
+                format: uuid
+                description: Unique id of the question within the version.
+              type:
+                type: string
+                description: How the question is answered, for example `text`. Set by the template editor.
+              title:
+                type: string
+                description: The question itself.
+              description:
+                type: string
+                description: Extra guidance for whoever fills it in. Empty when unset.
+              options:
+                type: array
+                description: |
+                  Choices for the question. Present even for types that take no
+                  choices, where the titles are empty.
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                      description: Unique id of the choice.
+                    title:
+                      type: string
+                      description: Label for the choice.
+        template:
+          type: object
+          description: |
+            The parent template this version belongs to. The same id as
+            `qcTemplateId`.
+          properties:
+            id:
+              type: string
+              format: uuid
+            organizationId:
+              type: string
+              format: uuid
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
           additionalProperties: true
         createdAt:
           type: string
