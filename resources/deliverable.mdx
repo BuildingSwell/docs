@@ -47,6 +47,8 @@ Every property the API returns for a deliverable.
 | `schedule` | object \| null | Scheduled window for the node. Present on `order` nodes only. Read-only. |
 | `progress` | object \| null | Progress for the node. Present on `order` nodes only. Write it through the progress action endpoint rather than by patching this object. Read-only. |
 | `computed` | object | Values BuildingSwell derives from the tree on every read. All read-only: anything you send here is ignored. |
+| `alertType` | enum | Highest-priority alert state for the node. One of `on-hold` \| `late` \| `at-risk` \| `no-risk`. Derived on every read, and returned at the top level rather than inside `computed`. Read-only. |
+| `alertTypeOrdinal` | integer | `alertType` as a sortable number: 0 no-risk, 1 at-risk, 2 late, 3 on-hold. Sort on this rather than on `alertType`, whose values are not alphabetical. Read-only. |
 | `createdAt` | date-time | When the record was created. Server-managed. |
 | `updatedAt` | date-time | When the record last changed. Server-managed. |
 
@@ -127,8 +129,12 @@ All read-only. BuildingSwell derives these from the tree on every read, so anyth
 | `effectiveDueDateIsInherited` | boolean | `true` when the due date comes from an ancestor. Defaults to `false`. |
 | `effectiveDueDateIsLate` | boolean | `true` when the effective due date has passed. Defaults to `false`. |
 | `hasReworkedStages` | boolean | `true` when any stage beneath this node has been reworked. Defaults to `false`. |
-| `alertType` | enum | Highest-priority alert state for the node. One of `on-hold` \| `late` \| `at-risk` \| `no-risk`. |
-| `alertTypeOrdinal` | integer | `alertType` as a sortable number: 0 no-risk, 1 at-risk, 2 late, 3 on-hold. |
+
+<Note>
+  `alertType` and `alertTypeOrdinal` are derived the same way but are returned at
+  the **top level** of the record, not inside `computed`. They are in the
+  [field table](#fields) above.
+</Note>
 
 ## Extra endpoints
 
