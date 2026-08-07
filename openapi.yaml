@@ -7487,12 +7487,6 @@ components:
             `alertType` as a sortable number: 0 no-risk, 1 at-risk, 2 late,
             3 on-hold. Sort on this rather than on `alertType`, whose values are
             not alphabetical.
-        manHours:
-          type: string
-          description: |
-            Planned man-hours for the node: `peopleNum` x `durationSec`, in hours.
-            Returned as a decimal string with trailing zeros, not a number, so
-            parse it before doing arithmetic.
         createdAt:
           type: string
           format: date-time

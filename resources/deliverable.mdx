@@ -49,7 +49,6 @@ Every property the API returns for a deliverable.
 | `computed` | object | Values BuildingSwell derives from the tree on every read. All read-only: anything you send here is ignored. |
 | `alertType` | enum | Highest-priority alert state for the node. One of `on-hold` \| `late` \| `at-risk` \| `no-risk`. Derived on every read, and returned at the top level rather than inside `computed`. Read-only. |
 | `alertTypeOrdinal` | integer | `alertType` as a sortable number: 0 no-risk, 1 at-risk, 2 late, 3 on-hold. Sort on this rather than on `alertType`, whose values are not alphabetical. Read-only. |
-| `manHours` | string | Planned man-hours for the node: `peopleNum` × `durationSec`, in hours. Returned as a decimal string with trailing zeros, not a number, so parse it before doing arithmetic. Read-only. |
 | `createdAt` | date-time | When the record was created. Server-managed. |
 | `updatedAt` | date-time | When the record last changed. Server-managed. |
 
@@ -132,9 +131,9 @@ All read-only. BuildingSwell derives these from the tree on every read, so anyth
 | `hasReworkedStages` | boolean | `true` when any stage beneath this node has been reworked. Defaults to `false`. |
 
 <Note>
-  `alertType`, `alertTypeOrdinal`, and `manHours` are derived the same way but are
-  returned at the **top level** of the record, not inside `computed`. They are in
-  the [field table](#fields) above.
+  `alertType` and `alertTypeOrdinal` are derived the same way but are returned at
+  the **top level** of the record, not inside `computed`. They are in the
+  [field table](#fields) above.
 
   Four of the fields above are returned in both places: `currentStageIds`,
   `currentPhaseNames`, `combinedWorkerIds`, and `combinedTagIds` also appear at the
