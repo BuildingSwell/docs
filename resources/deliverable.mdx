@@ -134,11 +134,6 @@ All read-only. BuildingSwell derives these from the tree on every read, so anyth
   `alertType` and `alertTypeOrdinal` are derived the same way but are returned at
   the **top level** of the record, not inside `computed`. They are in the
   [field table](#fields) above.
-
-  Four of the fields above are returned in both places: `currentStageIds`,
-  `currentPhaseNames`, `combinedWorkerIds`, and `combinedTagIds` also appear at the
-  top level, with the same values. Read them from `computed`, which is where they
-  are guaranteed to be.
 </Note>
 
 ## Extra endpoints

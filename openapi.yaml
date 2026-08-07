@@ -7439,38 +7439,6 @@ components:
               type: boolean
               description: '`true` when any stage beneath this node has been reworked.'
               default: false
-        currentStageIds:
-          type: array
-          items:
-            type: string
-            format: uuid
-          description: |
-            Also returned at the top level, with the same value as
-            `computed.currentStageIds`. Read it from `computed`, which is where it
-            is guaranteed to be.
-        currentPhaseNames:
-          type: array
-          items:
-            type: string
-          description: |
-            Also returned at the top level, with the same value as
-            `computed.currentPhaseNames`. Read it from `computed`.
-        combinedWorkerIds:
-          type: array
-          items:
-            type: string
-            format: uuid
-          description: |
-            Also returned at the top level, with the same value as
-            `computed.combinedWorkerIds`. Read it from `computed`.
-        combinedTagIds:
-          type: array
-          items:
-            type: string
-          description: |
-            Also returned at the top level, with the same value as
-            `computed.combinedTagIds`. Despite the name these are tag names, not
-            ids. Read it from `computed`.
         alertType:
           type: string
           enum:
