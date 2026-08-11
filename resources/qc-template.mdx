@@ -19,12 +19,40 @@ Every property the API returns for a QC template version.
 | `organizationId` | UUID | Your organization. Taken from the API key. Read-only. |
 | `qcTemplateId` | UUID | The template these versions belong to. Read-only. |
 | `name` | string | Template name. Read-only. |
+| `description` | string \| null | What the template is for. Read-only. |
 | `versionNumber` | number | Version number within the template. Read-only. |
 | `isDraft` | boolean | `true` while the version is still a draft. Read-only. |
 | `requiresPassFail` | boolean | `true` when the template ends in a pass/fail verdict rather than being questions-only. Read-only. |
-| `questions` | object \| null | The template's questions. Shape is set by the template editor. Read-only. |
+| `externallyFillable` | boolean | `true` when the set can be filled by someone outside your organization. Defaults to `false`. Read-only. |
+| `captureLocationOnSubmit` | boolean | `true` when submitting a set records the submitter's location. Defaults to `false`. Read-only. |
+| `questions` | object[] \| null | The template's questions, in display order. See [`questions`](#questions) below. Read-only. |
+| `template` | object | The parent template this version belongs to: `id`, `organizationId`, `createdAt`, `updatedAt`. The same id as `qcTemplateId`. Read-only. |
 | `createdAt` | date-time | When the version was created. Read-only. |
 | `updatedAt` | date-time | When the version last changed. Read-only. |
+
+### `questions`
+
+An array, in the order the questions are shown. Each entry:
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Unique id of the question within the version. |
+| `type` | string | How the question is answered, for example `text`. Set by the template editor. |
+| `title` | string | The question itself. |
+| `description` | string | Extra guidance for whoever fills it in. Empty when unset. |
+| `options` | object[] | Choices for the question, each `{ id, title }`. Present even for types that take no choices, where the titles are empty. |
+
+```json
+[
+  {
+    "id": "ea8ab1e3-d9d4-4fc3-95be-ff74a6767a37",
+    "type": "text",
+    "title": "Is the framing square? What are the diagonal measurements?",
+    "description": "",
+    "options": [{ "id": "ab1d9746-f8aa-4aa7-979e-f1583f5954c7", "title": "" }]
+  }
+]
+```
 
 <Warning>
   **Read and delete only.** `POST /qc-template` always fails server-side, and

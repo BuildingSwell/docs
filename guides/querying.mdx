@@ -116,13 +116,18 @@ filter the same way a top-level column does.
 Joins let you resolve names in one request instead of following ids around.
 
 ```http
-GET /deliverable?join:project:id,name=projectId eq relation.id
-GET /deliverable?join:project as p:name=projectId eq p.id
+GET /deliverable?join:project:id,name=computed.projectId eq relation.id
+GET /deliverable?join:project as p:name=computed.projectId eq p.id
 ```
 
 The format is `?join:<table>:<fields>=<condition>`. Use `relation` to refer to the
 joined table when you have not aliased it, or give it an alias with `as` and use
 that.
+
+Join on the column the resource actually exposes. A deliverable has no top-level
+`projectId`: the project it belongs to is [`computed.projectId`](/resources/deliverable#computed),
+and only `order` nodes carry `data.projectId`. Joining a column that does not
+exist fails with a `500`.
 
 Three things make joins more capable than they first look:
 
