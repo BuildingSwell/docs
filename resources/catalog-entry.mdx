@@ -1,0 +1,87 @@
+---
+title: "Catalog entries"
+description: "Company-configured lists, such as pay types."
+---
+
+A **catalog** is a list a company configures for itself and then picks from
+elsewhere in the product. Every catalog lives in one place and is served by one
+endpoint, `/catalog-entry`, with the `catalog` field saying which list a row
+belongs to.
+
+| Catalog | `catalog` value | Used by |
+| ------- | --------------- | ------- |
+| Pay types | `pay_type` | [Timesheet records](/resources/timesheet) (`payTypes`) |
+
+<Note>
+  This is separate from [codes](/resources/codes). Cost, union and per diem
+  codes predate catalogs and keep their own endpoints. New lists are added here.
+</Note>
+
+**Search columns:** `code`, `description`
+
+Standard CRUD applies, minus bulk delete. See
+[standard endpoints](/guides/standard-endpoints).
+
+## Fields
+
+| Field | Type | Notes |
+| ----- | ---- | ----- |
+| `id` | UUID | Unique id of the entry. Read-only. |
+| `organizationId` | UUID | Your organization. Taken from the API key. Read-only. |
+| `catalog` | string | Which list this entry belongs to, e.g. `pay_type`. Required on create. **Cannot be changed** after creation. |
+| `code` | string | The short value records store, e.g. `REG`. Unique within the catalog for your organization. Trimmed on save. |
+| `description` | string \| null | The human-readable name, e.g. `Regular`. This is what the app shows first; the code is shown beneath it. |
+| `isActive` | boolean | Whether the entry is offered for new records. Defaults to `true`. |
+| `sortOrder` | integer | Display order. Ties break on `code`. Defaults to `0`. |
+
+## Entries are referenced by value
+
+A record does not point at an entry by id — it stores the `code` **string**.
+The same rule the [code lists](/resources/codes) follow, and for the same
+reason: a timesheet keeps the classification it was approved under.
+
+Two consequences worth planning for:
+
+- **Deactivate, do not delete.** An entry still referenced by history should be
+  set `isActive: false`. It disappears from pickers for new records while
+  staying readable on the ones that already use it. Bulk delete is refused for
+  this reason.
+- **Renaming a code rewrites the records that use it.** Changing `code` queues a
+  background job that updates every stored reference — for pay types, the
+  `payTypes` on every [timesheet record](/resources/timesheet) holding the old
+  code. It is not instant: a read taken immediately after a rename can still
+  return the old one.
+- **Codes are case-insensitive within a list.** With `OT` already a pay type,
+  creating `ot` is rejected as a duplicate. Across lists they are unrelated, so
+  a future catalog may reuse the string freely.
+
+## A catalog cannot be changed
+
+`catalog` is fixed at creation. Moving an entry between lists would silently
+retarget every record holding its code, and codes are only unique within a
+list, so the move could also collide. Create a new entry in the other catalog.
+
+## Examples
+
+<CodeGroup>
+```bash List one catalog
+curl "https://{instance}/api/v2/catalog-entry?catalog=pay_type" \
+  -H "X-API-Key: $BSWL_API_KEY"
+```
+
+```bash Create a pay type
+curl -X POST "https://{instance}/api/v2/catalog-entry" \
+  -H "X-API-Key: $BSWL_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"catalog":"pay_type","code":"OT","description":"Overtime"}'
+```
+
+```bash Retire one
+curl -X PATCH "https://{instance}/api/v2/catalog-entry/{id}" \
+  -H "X-API-Key: $BSWL_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"isActive":false}'
+```
+</CodeGroup>
+
+Always pass `catalog` when listing. Without it you get every catalog at once.

@@ -14,6 +14,12 @@ and reporting integrations only have to understand one row type.
   [work sessions](/resources/deliverable-work-sessions).
 </Warning>
 
+<Note>
+  Check-in/out records carry `payTypes`: how that entry's paid time is split
+  across your [pay types](/resources/catalog-entry). Work sessions never carry
+  one.
+</Note>
+
 **Search columns:** `type`, `externalSync`, `externalSource`
 
 ## Fields
@@ -32,6 +38,7 @@ Every property the API returns for a timesheet record.
 | `deliverableId` | UUID \| null | Deliverable the time was logged against. Populated for `deliverable_work_session` rows only, and `null` for `attendance`. Read-only. |
 | `shiftWorkHours` | object \| null | The shift the record was worked against. Break times are local wall-clock, not UTC. Read-only. |
 | `breakTimeInSec` | integer \| null | Unpaid break seconds that fall inside this record's start/end window. The database derives it whenever the record is written, from `startDate`, `endDate`, and `shiftWorkHours`. Read-only: it cannot be written, and it is `0` while the record is still open. |
+| `payTypes` | object \| null | How this entry's paid time is split across pay types: pay-type `code` to seconds, e.g. `{"REG": 28800, "OT": 3600}`. `null` until somebody classifies it. Attendance only; always `null` on a work session. Codes are referenced BY VALUE, so renaming a [catalog entry](/resources/catalog-entry) rewrites them here in the background. |
 | `isEdited` | boolean | `true` when someone has edited the record by hand. Read-only. |
 | `lastUpdatedBy` | UUID \| null | Who last changed the record. Read-only. |
 | `metadata` | object | Free-form key-value store. No key is guaranteed to be present, and a missing key is not the same as a `null` one. See the resource guide for which paths populate `costCode` and `unionCode`. Read-only. |
@@ -239,3 +246,27 @@ Each row comes back with:
 
 `attendance` rows have no work-tree attribution at all: `deliverableId`,
 `stageId`, `buildOrderId`, and `overheadId` are all `null`.
+
+## Pay types
+
+`payTypes` splits one entry's paid time across your pay-type
+[catalog](/resources/catalog-entry). The keys are codes, the values are
+seconds, and the split is expected to add up to the entry's own paid time.
+
+```json
+"payTypes": { "REG": 28800, "OT": 3600 }
+```
+
+Nothing is derived. Building Swell does not put an entry on a default pay type
+and does not infer overtime from hours worked, because when overtime begins
+varies by union and jurisdiction and payroll owns those rules. `null` means
+nobody has classified the entry yet.
+
+The split lives on the entry rather than on the day, so an entry that runs past
+midnight carries its own hours and its own classification. A day's total per
+pay type is the sum across that day's entries.
+
+`payTypes` is **read-only over the API**, like every other field on this
+resource. Pay types are set in Building Swell, on the check-in/out drawer's
+**Pay Types** tab, and read from here — so a payroll export can resolve each
+entry's split without anyone re-keying it.

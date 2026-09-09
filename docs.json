@@ -89,6 +89,7 @@
               "resources/qc-template",
               "resources/timesheet",
               "resources/codes",
+              "resources/catalog-entry",
               "resources/worker",
               "resources/role",
               "resources/organization-member"

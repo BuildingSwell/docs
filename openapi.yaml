@@ -3980,6 +3980,110 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
+  /catalog-entry:
+    get:
+      tags:
+      - Catalog entries
+      summary: List catalog entries
+      description: |-
+        Company-configured lists, such as pay types. Always pass `catalog` — without it you get every catalog at once.
+
+        Inactive entries are returned like any other. Filter on `isActive` when you only want the ones still offered.
+
+        Full-text `search` covers `code` and `description`.
+      parameters:
+      - name: catalog
+        in: query
+        required: false
+        description: Which list to return, e.g. `pay_type`.
+        schema:
+          type: string
+          example: pay_type
+      - $ref: '#/components/parameters/page'
+      - $ref: '#/components/parameters/pageSize'
+      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/select'
+      - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/filter'
+      responses:
+        '200':
+          description: A page of catalog entries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogEntryListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Catalog entries
+      summary: Create a catalog entry
+      description: |-
+        `catalog` and `code` are required. `code` is trimmed and must be unique within that catalog for your organization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogEntryWriteRequest'
+      responses:
+        '201':
+          description: The created entry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogEntryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /catalog-entry/{id}:
+    patch:
+      tags:
+      - Catalog entries
+      summary: Update a catalog entry
+      description: |-
+        `catalog` cannot be changed — moving an entry between lists would retarget every record holding its code.
+
+        Changing `code` queues a background job that rewrites the stored references — for pay types, the `payTypes` on every timesheet record holding the old code. It is not instant.
+
+        Codes are case-insensitive within a catalog: with `OT` already present, creating `ot` is rejected as a duplicate. Across catalogs they are unrelated.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogEntryWriteRequest'
+      responses:
+        '200':
+          description: The updated entry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogEntryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /cost-code:
     get:
       tags:
@@ -6600,6 +6704,65 @@ components:
       schema:
         type: string
   schemas:
+    CatalogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        catalog:
+          type: string
+          description: Which list this entry belongs to. Cannot be changed after creation.
+          example: pay_type
+        code:
+          type: string
+          description: The short value records store, by reference. Unique within the catalog.
+          example: OT
+        description:
+          type: string
+          nullable: true
+          description: The human-readable name. Shown before the code in the app.
+          example: Overtime
+        isActive:
+          type: boolean
+          description: Whether the entry is offered for new records.
+        sortOrder:
+          type: integer
+          description: Display order; ties break on code.
+    CatalogEntryResponse:
+      type: object
+      properties:
+        value:
+          $ref: '#/components/schemas/CatalogEntry'
+    CatalogEntryListResponse:
+      type: object
+      properties:
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogEntry'
+        hasMore:
+          type: boolean
+    CatalogEntryWriteRequest:
+      type: object
+      properties:
+        catalog:
+          type: string
+          example: pay_type
+        code:
+          type: string
+          example: OT
+        description:
+          type: string
+          nullable: true
+          example: Overtime
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
     Error:
       type: object
       properties:
@@ -8999,6 +9162,16 @@ components:
           type: integer
           description: |-
             Unpaid break seconds that fall inside this record's start/end window. The database derives it whenever the record is written, from `startDate`, `endDate`, and `shiftWorkHours`. Read-only: it cannot be written, and it is `0` while the record is still open.
+          nullable: true
+        payTypes:
+          type: object
+          additionalProperties:
+            type: integer
+          description: |-
+            How this entry's paid time is split across pay types: pay-type `code` to seconds. Read-only, like every field on this resource: pay types are set in Building Swell and read from here. `null` until somebody classifies it, and always `null` on a work session. Nothing is derived — Building Swell never infers overtime from hours worked. Codes are referenced BY VALUE, so renaming a catalog entry rewrites them here in the background.
+          example:
+            REG: 28800
+            OT: 3600
           nullable: true
         isEdited:
           type: boolean
