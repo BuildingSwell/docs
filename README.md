@@ -24,7 +24,8 @@ mint broken-links
 
 1. Sign in at [mintlify.com](https://mintlify.com) and create a project (or open an existing one).
 2. Connect this GitHub repository.
-3. Deploy — Mintlify builds from `docs.json` and `openapi.yaml` at the repository root.
+3. Mark a pull request ready for review to make it eligible for a Mintlify preview.
+4. Merge the approved pull request to `main` to publish through the connected project. Mintlify builds from `docs.json` and `openapi.yaml` at the repository root.
 
 ### Mintlify dashboard MCP (optional)
 
