@@ -1,0 +1,63 @@
+---
+title: "Items"
+description: "Material and part definitions, purchasing units, and availability."
+---
+
+Base path: `/item` (relative to your instance’s `/api/v2`).
+
+The [standard endpoints](/guides/standard-endpoints) provide reads and writes, subject to the constraints below.
+
+**Search columns:** `name`, `identifier`, `sku`, `category`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Optional on create; see constraints below. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `isArchived` | boolean | Optional on create; see constraints below. |
+| `archivedAt` | date-time \| null | Read-only. |
+| `name` | string | Required on create. |
+| `identifier` | string | Optional on create; see constraints below. |
+| `sku` | string | Required on create. |
+| `description` | string \| null | Optional on create; see constraints below. |
+| `category` | string \| null | Optional on create; see constraints below. |
+| `type` | string | `raw_material`, `purchased`, `manufactured`. Optional on create; see constraints below. |
+| `status` | string \| null | `design`, `active`, `obsolete`. Optional on create; see constraints below. |
+| `isConsumable` | boolean | Optional on create; see constraints below. |
+| `shipLoose` | boolean | Optional on create; see constraints below. |
+| `trackedOnly` | boolean | Optional on create; see constraints below. |
+| `baseUnitMeasureId` | uuid \| null | Optional on create; see constraints below. |
+| `purchaseUnitMeasureId` | uuid \| null | Optional on create; see constraints below. |
+| `unitsPerPurchase` | number \| null | Optional on create; see constraints below. |
+| `stockLength` | number \| null | Optional on create; see constraints below. |
+| `defaultLocationId` | uuid \| null | Optional on create; see constraints below. |
+| `parentItemId` | uuid \| null | Optional on create; see constraints below. |
+| `trackingMode` | string | `aggregate`, `piece`, `lot`. Optional on create; see constraints below. |
+| `minQuantity` | number \| null | Optional on create; see constraints below. |
+| `maxQuantity` | number \| null | Optional on create; see constraints below. |
+| `unitCost` | number \| null | Optional on create; see constraints below. |
+| `metadata` | object | Optional on create; see constraints below. |
+| `onHand` | number | Read-only. |
+| `allocated` | number | Read-only. |
+| `available` | number | Read-only. |
+| `onOrder` | number | Read-only. |
+| `isShort` | boolean | Read-only. |
+| `belowMin` | boolean | Read-only. |
+| `vendorSkus` | string | Read-only. |
+
+## Stock behavior
+
+`unitCost` is the moving-average cost per base unit. Inventory transactions snapshot unit cost when posted.
+
+`onHand`, `allocated`, `available`, `onOrder`, `isShort`, `belowMin`, and `vendorSkus` are computed and read-only. `available` is on-hand stock minus outstanding reservations. Project reservations are netted against child order reservations to avoid double counting.
+
+An item with `isConsumable`, `shipLoose`, or `trackedOnly` set does not reserve or draw stock through production. Purchase quantities convert to base units with `unitsPerPurchase`.
+
+`GET /item/shop-availability?shopId=<uuid>` returns `{ "value": [...] }` with `itemId`, `onHand`, `reserved`, `available`, and `isShort` per item for that department.
+
+## Archive and restore
+
+DELETE archives this resource. Restore it with `PATCH /item/{id}` and `{ "isArchived": false }`. See [archiving and deleting](/guides/archiving-and-deleting).

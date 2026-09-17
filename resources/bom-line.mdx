@@ -1,0 +1,65 @@
+---
+title: "BOM lines"
+description: "Planned material inputs for routes, orders, and projects."
+---
+
+Base path: `/bom-line` (relative to your instance’s `/api/v2`).
+
+The [standard endpoints](/guides/standard-endpoints) provide reads and writes, subject to the constraints below.
+
+**Search columns:** `identifier`, `poNumber`, `notes`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Optional on create; see constraints below. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `isArchived` | boolean | Optional on create; see constraints below. |
+| `archivedAt` | date-time \| null | Read-only. |
+| `name` | string | Optional on create; see constraints below. |
+| `identifier` | string | Optional on create; see constraints below. |
+| `itemId` | uuid | Required on create. |
+| `routeDeliverableId` | uuid \| null | Optional on create; see constraints below. |
+| `orderDeliverableId` | uuid \| null | Optional on create; see constraints below. |
+| `projectId` | uuid \| null | Optional on create; see constraints below. |
+| `mode` | string | `ratio`, `total`. Optional on create; see constraints below. |
+| `scaling` | string | `per_unit`, `per_order`. Optional on create; see constraints below. |
+| `outputPerUnit` | number \| null | Optional on create; see constraints below. |
+| `quantity` | number \| null | Optional on create; see constraints below. |
+| `quantityActual` | number | Optional on create; see constraints below. |
+| `unitMeasureId` | uuid \| null | Optional on create; see constraints below. |
+| `poNumber` | string \| null | Optional on create; see constraints below. |
+| `subOrderRef` | string \| null | Optional on create; see constraints below. |
+| `source` | string | `manual`, `import`, `route_template`, `adhoc`. Optional on create; see constraints below. |
+| `sortOrder` | number | Optional on create; see constraints below. |
+| `notes` | string \| null | Optional on create; see constraints below. |
+| `metadata` | object | Optional on create; see constraints below. |
+
+## Ownership and quantities
+
+Supply `itemId` and exactly one of `routeDeliverableId`, `orderDeliverableId`, or
+`projectId`. A route or order owner must be the root deliverable itself; use
+placements to target a phase, stage, or step. A route needs a positive
+`outputPerUnit` or `quantity`; orders and projects need a positive `quantity`.
+The name and unit default from the item.
+
+`mode` identifies the quantity column: `ratio` uses `outputPerUnit`, and `total` uses `quantity`. `scaling` controls whether that figure is `per_unit` or `per_order`. Route lines default to per-unit ratios; order/project lines default to per-order totals. `ratio` with `per_order` is invalid, and project lines must use `per_order`.
+
+## Reservation actions
+
+| Endpoint | Request |
+| --- | --- |
+| `POST /bom-line/order/{id}/prepopulate` | `{}` seeds from the project BOM when one exists. Pass `{ "routeDeliverableId": "<uuid>" }` to fall back to route inputs and copy route output declarations. Re-runs are idempotent. |
+| `POST /bom-line/order/{id}/allocate` | `{}` or `{ "itemIds": ["<uuid>"] }`; reserves order materials. |
+| `POST /bom-line/project/{id}/allocate` | No body; reserves project materials. |
+| `GET /bom-line/demand-rollup` | Organization material demand and source breakdown. |
+| `GET /bom-line/project/{projectId}/materials-rollup` | Project estimate, planned, on-order, used, and variance totals. |
+
+These return `{ "value": ... }`. Allocation changes reservations, not stock on hand. Record actual usage through [production actions](/resources/production-output).
+
+## Archive and restore
+
+DELETE archives this resource. Restore it with `PATCH /bom-line/{id}` and `{ "isArchived": false }`. See [archiving and deleting](/guides/archiving-and-deleting).

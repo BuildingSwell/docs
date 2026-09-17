@@ -92,7 +92,44 @@
               "resources/catalog-entry",
               "resources/worker",
               "resources/role",
-              "resources/organization-member"
+              "resources/organization-member",
+              "resources/custom-property"
+            ]
+          },
+          {
+            "group": "Materials and inventory",
+            "icon": "boxes-stacked",
+            "pages": [
+              "resources/item",
+              "resources/item-vendor",
+              "resources/inventory-stock",
+              "resources/inventory-transaction",
+              "resources/inventory-allocation",
+              "resources/bom-line",
+              "resources/production-output",
+              "resources/unit-measure",
+              "resources/vendor",
+              "resources/location"
+            ]
+          },
+          {
+            "group": "Delivery",
+            "icon": "truck",
+            "pages": [
+              "resources/delivery",
+              "resources/delivery-line",
+              "resources/truck",
+              "resources/contact",
+              "resources/project-contact"
+            ]
+          },
+          {
+            "group": "Organization lists",
+            "icon": "building",
+            "pages": [
+              "resources/team",
+              "resources/shift",
+              "resources/shop"
             ]
           },
           {
@@ -235,18 +272,43 @@
             "openapi": "openapi.yaml",
             "pages": [
               "GET /document",
-              "POST /document",
               "GET /document/{id}",
               "PATCH /document/{id}",
-              "PUT /document/{id}",
               "DELETE /document/{id}",
               "GET /document/count",
               "POST /document/count",
               "POST /document/query",
               "POST /document/group-and-count",
               "PATCH /document/bulk",
-              "PUT /document/bulk",
-              "DELETE /document/bulk"
+              "DELETE /document/bulk",
+              "GET /document/hub",
+              "POST /document/hub/bulk-upload",
+              "GET /document/{id}/hub-detail",
+              "POST /document/{id}/versions",
+              "POST /document/{id}/versions/{versionId}/archive",
+              "POST /document/{id}/versions/{versionId}/set-current",
+              "POST /document/{id}/links",
+              "DELETE /document/links/{linkId}",
+              "POST /document/{id}/copy-mode",
+              "POST /document/counts-by-deliverable"
+            ]
+          },
+          {
+            "group": "Custom properties",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /custom-property",
+              "POST /custom-property",
+              "GET /custom-property/{id}",
+              "PATCH /custom-property/{id}",
+              "PUT /custom-property/{id}",
+              "DELETE /custom-property/{id}",
+              "POST /custom-property/query",
+              "GET /custom-property/count",
+              "POST /custom-property/count",
+              "POST /custom-property/group-and-count",
+              "PATCH /custom-property/bulk",
+              "PUT /custom-property/bulk"
             ]
           },
           {
@@ -407,6 +469,318 @@
               "POST /concepts/root/{rootId}/progress/{id}/plan",
               "GET /concepts/routes/{id}",
               "GET /concepts/stage-masters"
+            ]
+          },
+          {
+            "group": "Items",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /item",
+              "POST /item",
+              "GET /item/{id}",
+              "PATCH /item/{id}",
+              "PUT /item/{id}",
+              "DELETE /item/{id}",
+              "POST /item/query",
+              "GET /item/count",
+              "POST /item/count",
+              "POST /item/group-and-count",
+              "PATCH /item/bulk",
+              "PUT /item/bulk",
+              "GET /item/shop-availability"
+            ]
+          },
+          {
+            "group": "Item vendors",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /item-vendor",
+              "POST /item-vendor",
+              "GET /item-vendor/{id}",
+              "PATCH /item-vendor/{id}",
+              "PUT /item-vendor/{id}",
+              "DELETE /item-vendor/{id}",
+              "POST /item-vendor/query",
+              "GET /item-vendor/count",
+              "POST /item-vendor/count",
+              "POST /item-vendor/group-and-count",
+              "PATCH /item-vendor/bulk",
+              "PUT /item-vendor/bulk"
+            ]
+          },
+          {
+            "group": "Inventory stock",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /inventory-stock",
+              "GET /inventory-stock/{id}",
+              "POST /inventory-stock/query",
+              "GET /inventory-stock/count",
+              "POST /inventory-stock/count",
+              "POST /inventory-stock/group-and-count",
+              "POST /inventory-stock/{id}/remove",
+              "POST /inventory-stock/remove-empty"
+            ]
+          },
+          {
+            "group": "Inventory transactions",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /inventory-transaction",
+              "POST /inventory-transaction",
+              "GET /inventory-transaction/{id}",
+              "POST /inventory-transaction/query",
+              "GET /inventory-transaction/count",
+              "POST /inventory-transaction/count",
+              "POST /inventory-transaction/group-and-count"
+            ]
+          },
+          {
+            "group": "Inventory allocations",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /inventory-allocation",
+              "GET /inventory-allocation/{id}",
+              "POST /inventory-allocation/query",
+              "GET /inventory-allocation/count",
+              "POST /inventory-allocation/count",
+              "POST /inventory-allocation/group-and-count"
+            ]
+          },
+          {
+            "group": "BOM lines",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /bom-line",
+              "POST /bom-line",
+              "GET /bom-line/{id}",
+              "PATCH /bom-line/{id}",
+              "PUT /bom-line/{id}",
+              "DELETE /bom-line/{id}",
+              "POST /bom-line/query",
+              "GET /bom-line/count",
+              "POST /bom-line/count",
+              "POST /bom-line/group-and-count",
+              "PATCH /bom-line/bulk",
+              "PUT /bom-line/bulk",
+              "POST /bom-line/order/{id}/prepopulate",
+              "POST /bom-line/order/{id}/allocate",
+              "POST /bom-line/project/{id}/allocate",
+              "GET /bom-line/demand-rollup",
+              "GET /bom-line/project/{projectId}/materials-rollup"
+            ]
+          },
+          {
+            "group": "Production outputs",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /production-output",
+              "POST /production-output",
+              "GET /production-output/{id}",
+              "PATCH /production-output/{id}",
+              "PUT /production-output/{id}",
+              "DELETE /production-output/{id}",
+              "POST /production-output/query",
+              "GET /production-output/count",
+              "POST /production-output/count",
+              "POST /production-output/group-and-count",
+              "PATCH /production-output/bulk",
+              "PUT /production-output/bulk",
+              "POST /production/produce",
+              "POST /production/consume",
+              "POST /production/adjust-actual",
+              "GET /production/order/{id}/status",
+              "GET /production/order/{id}/entries"
+            ]
+          },
+          {
+            "group": "Units of measure",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /unit-measure",
+              "POST /unit-measure",
+              "GET /unit-measure/{id}",
+              "PATCH /unit-measure/{id}",
+              "PUT /unit-measure/{id}",
+              "DELETE /unit-measure/{id}",
+              "POST /unit-measure/query",
+              "GET /unit-measure/count",
+              "POST /unit-measure/count",
+              "POST /unit-measure/group-and-count",
+              "PATCH /unit-measure/bulk",
+              "PUT /unit-measure/bulk"
+            ]
+          },
+          {
+            "group": "Vendors",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /vendor",
+              "POST /vendor",
+              "GET /vendor/{id}",
+              "PATCH /vendor/{id}",
+              "PUT /vendor/{id}",
+              "DELETE /vendor/{id}",
+              "POST /vendor/query",
+              "GET /vendor/count",
+              "POST /vendor/count",
+              "POST /vendor/group-and-count",
+              "PATCH /vendor/bulk",
+              "PUT /vendor/bulk"
+            ]
+          },
+          {
+            "group": "Locations",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /location",
+              "POST /location",
+              "GET /location/{id}",
+              "PATCH /location/{id}",
+              "PUT /location/{id}",
+              "DELETE /location/{id}",
+              "POST /location/query",
+              "GET /location/count",
+              "POST /location/count",
+              "POST /location/group-and-count",
+              "PATCH /location/bulk",
+              "PUT /location/bulk"
+            ]
+          },
+          {
+            "group": "Deliveries",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /delivery",
+              "POST /delivery",
+              "GET /delivery/{id}",
+              "PATCH /delivery/{id}",
+              "PUT /delivery/{id}",
+              "DELETE /delivery/{id}",
+              "POST /delivery/query",
+              "GET /delivery/count",
+              "POST /delivery/count",
+              "POST /delivery/group-and-count",
+              "PATCH /delivery/bulk",
+              "PUT /delivery/bulk",
+              "POST /delivery/outbound",
+              "PATCH /delivery/{id}/outbound",
+              "POST /delivery/{id}/receive",
+              "POST /delivery/{id}/start",
+              "POST /delivery/{id}/cancel",
+              "POST /delivery/{id}/archive",
+              "POST /delivery/{id}/restore",
+              "POST /delivery/{id}/complete",
+              "GET /delivery/{id}/itinerary",
+              "GET /delivery/{id}/cargo-plan"
+            ]
+          },
+          {
+            "group": "Delivery lines",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /delivery-line",
+              "POST /delivery-line",
+              "GET /delivery-line/{id}",
+              "PATCH /delivery-line/{id}",
+              "PUT /delivery-line/{id}",
+              "DELETE /delivery-line/{id}",
+              "POST /delivery-line/query",
+              "GET /delivery-line/count",
+              "POST /delivery-line/count",
+              "POST /delivery-line/group-and-count",
+              "PATCH /delivery-line/bulk",
+              "PUT /delivery-line/bulk"
+            ]
+          },
+          {
+            "group": "Trucks",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /truck",
+              "POST /truck",
+              "GET /truck/{id}",
+              "PATCH /truck/{id}",
+              "PUT /truck/{id}",
+              "DELETE /truck/{id}",
+              "POST /truck/query",
+              "GET /truck/count",
+              "POST /truck/count",
+              "POST /truck/group-and-count",
+              "PATCH /truck/bulk",
+              "PUT /truck/bulk"
+            ]
+          },
+          {
+            "group": "Contacts",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /contact",
+              "POST /contact",
+              "GET /contact/{id}",
+              "PATCH /contact/{id}",
+              "PUT /contact/{id}",
+              "DELETE /contact/{id}",
+              "POST /contact/query",
+              "GET /contact/count",
+              "POST /contact/count",
+              "POST /contact/group-and-count",
+              "PATCH /contact/bulk",
+              "PUT /contact/bulk"
+            ]
+          },
+          {
+            "group": "Project contacts",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /project-contact",
+              "POST /project-contact",
+              "GET /project-contact/{id}",
+              "PATCH /project-contact/{id}",
+              "PUT /project-contact/{id}",
+              "DELETE /project-contact/{id}",
+              "POST /project-contact/query",
+              "GET /project-contact/count",
+              "POST /project-contact/count",
+              "POST /project-contact/group-and-count",
+              "PATCH /project-contact/bulk",
+              "PUT /project-contact/bulk"
+            ]
+          },
+          {
+            "group": "Teams",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /team",
+              "GET /team/{id}",
+              "POST /team/query",
+              "GET /team/count",
+              "POST /team/count",
+              "POST /team/group-and-count"
+            ]
+          },
+          {
+            "group": "Shifts",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /shift",
+              "GET /shift/{id}",
+              "POST /shift/query",
+              "GET /shift/count",
+              "POST /shift/count",
+              "POST /shift/group-and-count"
+            ]
+          },
+          {
+            "group": "Departments (shops)",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /shop",
+              "GET /shop/{id}",
+              "POST /shop/query",
+              "GET /shop/count",
+              "POST /shop/count",
+              "POST /shop/group-and-count"
             ]
           }
         ]

@@ -14,7 +14,7 @@ the rest.
 | `POST` | `/project` | Create one record, or many |
 | `PATCH` | `/project/{id}` | Change some fields on a record |
 | `PUT` | `/project/{id}?update=<columns>` | Insert or update a record |
-| `DELETE` | `/project/{id}` | Permanently remove a record |
+| `DELETE` | `/project/{id}` | Remove or archive a record, depending on the resource |
 | `GET` | `/project/count` | Count matching records |
 | `POST` | `/project/count` | Count, with the filter in the body |
 | `POST` | `/project/query` | List, with the query in the body |
@@ -66,7 +66,7 @@ Content-Type: application/json
 
 ### Bulk delete does not exist
 
-`DELETE /{resource}/bulk` returns `403` on every resource. To remove many records,
+On writable factory resources, `DELETE /{resource}/bulk` returns `403`; read-only resources do not register it. To remove many records,
 archive them with `PATCH /bulk`. See
 [archiving and deleting](/guides/archiving-and-deleting).
 
@@ -127,3 +127,16 @@ curl -X POST "https://app.buildingswell.com/api/v2/project/query" \
 ```
 
 See [querying](/guides/querying) for the filter, sort, and join syntax these share.
+
+## Resource-specific write rules
+
+The standard shape does not mean every resource supports every method.
+[Stock](/resources/inventory-stock), [allocations](/resources/inventory-allocation),
+[teams](/resources/team), [shifts](/resources/shift), and
+[departments](/resources/shop) expose reads. [Transactions](/resources/inventory-transaction)
+accept a restricted single-object POST. [Documents](/resources/document) disable
+generic POST and PUT and restrict PATCH to `isArchived`. DELETE archives items, BOM lines,
+production outputs, units of measure, vendors, locations, trucks, contacts,
+custom properties, and delivery lines. [Deliveries](/resources/delivery) have
+dedicated archive/restore commands while DELETE is destructive. Check each
+resource page before generating writes.

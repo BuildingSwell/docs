@@ -1,0 +1,92 @@
+---
+title: "Deliveries"
+description: "Inbound receipts, outbound trips, and transfers."
+---
+
+Base path: `/delivery` (relative to your instance’s `/api/v2`).
+
+The [standard endpoints](/guides/standard-endpoints) provide reads and writes, subject to the constraints below.
+
+**Search columns:** `name`, `identifier`, `poNumber`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Optional on create; see constraints below. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `isArchived` | boolean | Optional on create; see constraints below. |
+| `archivedAt` | date-time \| null | Read-only. |
+| `name` | string | Required on create. |
+| `identifier` | string | Optional on create; see constraints below. |
+| `direction` | string | `inbound`, `outbound`, `transfer`. Generic create accepts `inbound` only; direction is immutable. |
+| `status` | string | `expected`, `scheduled`, `in_transit`, `received`, `delivered`, `cancelled`. Generic inbound create accepts `expected` only; lifecycle actions own transitions. |
+| `fromKind` | string \| null | Optional on create; see constraints below. |
+| `fromLocationId` | uuid \| null | Optional on create; see constraints below. |
+| `fromVendorId` | uuid \| null | Optional on create; see constraints below. |
+| `fromAddress` | string \| null | Optional on create; see constraints below. |
+| `toKind` | string \| null | Optional on create; see constraints below. |
+| `toLocationId` | uuid \| null | Optional on create; see constraints below. |
+| `toAddress` | string \| null | Optional on create; see constraints below. |
+| `plannedStartAt` | date-time \| null | Read-only. |
+| `plannedEndAt` | date-time \| null | Read-only. |
+| `cargoItemCount` | integer | Read-only. |
+| `cargoDeliveredCount` | integer | Read-only. |
+| `actualStartAt` | date-time \| null | Optional on create; see constraints below. |
+| `actualEndAt` | date-time \| null | Optional on create; see constraints below. |
+| `poNumber` | string \| null | Optional on create; see constraints below. |
+| `expectedDate` | date-time \| null | Optional on create; see constraints below. |
+| `truckId` | uuid \| null | Optional on create; see constraints below. |
+| `truck` | string \| null | Optional on create; see constraints below. |
+| `truckName` | string \| null | Read-only. |
+| `trailerType` | string \| null | Optional on create; see constraints below. |
+| `isOverDimension` | boolean | Optional on create; see constraints below. |
+| `carrierKind` | string \| null | `own` or `third_party`. Optional on create. |
+| `receiverContactId` | uuid \| null | Optional on create; see constraints below. |
+| `driverContactId` | uuid \| null | Optional on create; see constraints below. |
+| `publicToken` | string \| null | Server-minted public credential for outbound/transfer workflows. Read-only. |
+| `deliverableGroupId` | uuid \| null | Paired Planning group created by the outbound service. Read-only. |
+| `confirmationTemplateId` | uuid \| null | Optional on create; see constraints below. |
+| `data` | object | Optional on create; see constraints below. |
+| `isLate` | boolean | Read-only. |
+
+## Choose the creation workflow
+
+`POST /delivery` creates an **inbound** header. For outbound or transfer trips use `POST /delivery/outbound`, which creates the paired deliverable group and public token. It accepts `name`, optional `direction` (`outbound` or `transfer`), `itemIds` (cargo deliverable IDs), `workerIds`, truck/contact references, source/destination fields, and planned start/end times. A planned end must be after the planned start. Component cargo additionally requires `deliveryComponentCargoEnabled`; the service validates cargo eligibility.
+
+Generic inbound creation uses `expected`; `direction` cannot be changed later.
+Inbound statuses are `expected`, `in_transit`, `received`, and `cancelled`.
+Outbound/transfer statuses are `scheduled`, `in_transit`, `delivered`, and
+`cancelled`. Move between them with the lifecycle actions below, not generic
+PATCH. Partial completion is derived from cargo quantities/progress; `partial`
+is not a stored status.
+
+## Receiving and lifecycle
+
+```http
+POST /delivery/<id>/receive
+Content-Type: application/json
+
+{ "defaultLocationId": "<uuid>", "lines": [
+  { "lineId": "<uuid>", "quantityActual": 12, "locationId": "<uuid>" }
+] }
+```
+
+Receiving posts inventory receipts and updates the manifest. It requires item update permission. Use `POST /delivery/{id}/start`, `/complete`, or `/cancel` for outbound lifecycle transitions so cargo and the paired group stay synchronized.
+
+Use `POST /delivery/{id}/archive` and `/restore` for archival. Both require
+delivery delete permission, and only a received, delivered, or cancelled trip
+can be archived. Generic PATCH rejects `isArchived` and `archivedAt`.
+`plannedStartAt` and `plannedEndAt` are paired-group schedule projections; edit
+them through `PATCH /delivery/{id}/outbound`. `publicToken`,
+`deliverableGroupId`, `truckName`, cargo counts, and `isLate` are read-only.
+
+<Warning>
+  `DELETE /delivery/{id}` permanently removes the delivery and cascades to its
+  manifest lines, stops, legs, and cargo spans. It does not remove the paired
+  deliverable group. This is not the archive operation and cannot be undone.
+</Warning>
+
+Read a trip's stops and legs with `GET /delivery/{id}/itinerary`, and cargo spans with `GET /delivery/{id}/cargo-plan`. Manifest lines are a separate [resource](/resources/delivery-line).

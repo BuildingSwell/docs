@@ -26,13 +26,14 @@ Every property the API returns for a stage.
 | `description` | string \| null | What happens at this station. |
 | `maxOrderCapacity` | integer | How many orders the station can hold at once. Zero or greater. **Required on create.** |
 | `costCode` | string \| null | Cost code. Trimmed on write, and an empty string is rejected: send a non-empty string or `null`. Stored as a plain string and not validated against the [cost code list](/resources/codes). |
+| `archivedAt` | date-time \| null | Archive time, cleared on restore. Server-managed. |
 | `isArchived` | boolean | Archived stations are hidden from list results unless you ask for them. Defaults to `false`. |
 | `createdAt` | date-time | When the record was created. Server-managed. |
 | `updatedAt` | date-time | When the record last changed. Server-managed. |
 
 <Note>
-  Stages carry no `identifier` and no `archivedAt`. They are keyed by name within
-  a department, so `isArchived` is the only lifecycle field.
+  Stages carry no `identifier`. They are keyed by name within
+  a department. Both `isArchived` and `archivedAt` describe archive state.
 </Note>
 
 ## Capacity

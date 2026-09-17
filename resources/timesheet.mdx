@@ -22,6 +22,14 @@ and reporting integrations only have to understand one row type.
 
 **Search columns:** `type`, `externalSync`, `externalSource`
 
+## Processed and original clock times
+
+`startDate` and `endDate` are the effective times used by BuildingSwell reporting. The hours-rounding job can rewrite these boundaries after a session closes. Do not assume they are the original clock times or that a closed record will never change.
+
+`rawStart` and `rawEnd` preserve the original boundary when that side is processed. They are independent: one can be populated while the other is null. A non-null raw value means that boundary was processed, even if its value equals the effective time. There is no separate rounded flag.
+
+For original clock times, use `rawStart ?? startDate` and `rawEnd ?? endDate`. For processed hours, use `startDate` and `endDate`, accounting for unpaid breaks. Raw fields are read-only; editing time can reset the processing state. Reconcile previously fetched closed records when importing hours.
+
 ## Fields
 
 Every property the API returns for a timesheet record.
@@ -33,12 +41,14 @@ Every property the API returns for a timesheet record.
 | `type` | enum | Which kind of record this is. Only these two exist. One of `attendance` \| `deliverable_work_session`. Read-only. |
 | `workerId` | UUID | Person the time belongs to. Resolve names through `/worker`. Read-only. |
 | `shopId` | UUID | Department the record belongs to. Read-only. |
-| `startDate` | date-time | When the record started, in UTC. Read-only. |
-| `endDate` | date-time \| null | When the record ended, in UTC. `null` means it is still open. Read-only. |
+| `startDate` | date-time | Effective start in UTC; may be rounded. Read-only. |
+| `endDate` | date-time \| null | Effective end in UTC; may be rounded. `null` means it is still open. Read-only. |
 | `deliverableId` | UUID \| null | Deliverable the time was logged against. Populated for `deliverable_work_session` rows only, and `null` for `attendance`. Read-only. |
 | `shiftWorkHours` | object \| null | The shift the record was worked against. Break times are local wall-clock, not UTC. Read-only. |
 | `breakTimeInSec` | integer \| null | Unpaid break seconds that fall inside this record's start/end window. The database derives it whenever the record is written, from `startDate`, `endDate`, and `shiftWorkHours`. Read-only: it cannot be written, and it is `0` while the record is still open. |
 | `payTypes` | object \| null | How this entry's paid time is split across pay types: pay-type `code` to seconds, e.g. `{"REG": 28800, "OT": 3600}`. `null` until somebody classifies it. Attendance only; always `null` on a work session. Codes are referenced BY VALUE, so renaming a [catalog entry](/resources/catalog-entry) rewrites them here in the background. |
+| `rawStart` | date-time \| null | Original start preserved when that boundary is processed. Read-only. |
+| `rawEnd` | date-time \| null | Original end preserved when that boundary is processed. Read-only. |
 | `isEdited` | boolean | `true` when someone has edited the record by hand. Read-only. |
 | `lastUpdatedBy` | UUID \| null | Who last changed the record. Read-only. |
 | `metadata` | object | Free-form key-value store. No key is guaranteed to be present, and a missing key is not the same as a `null` one. See the resource guide for which paths populate `costCode` and `unionCode`. Read-only. |

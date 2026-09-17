@@ -1,0 +1,47 @@
+---
+title: "Locations"
+description: "Department and project locations for storage and delivery."
+---
+
+Base path: `/location` (relative to your instance’s `/api/v2`).
+
+The [standard endpoints](/guides/standard-endpoints) provide reads and writes, subject to the constraints below.
+
+**Search columns:** `name`, `code`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Optional on create; see constraints below. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `shopId` | uuid \| null | Optional on create; see constraints below. |
+| `projectId` | uuid \| null | Optional on create; see constraints below. |
+| `parentId` | uuid \| null | Optional on create; see constraints below. |
+| `name` | string | Required on create. |
+| `code` | string \| null | Optional on create; see constraints below. |
+| `type` | string | `storage`, `staging`, `in_transit`, `yard`, `build_bay`, `station`, `rack`, `bay`, `booth`, `cell`, `shelf`, `zone`, `work_center`, `site`. Optional on create; see constraints below. |
+| `metadata` | object | Optional on create; see constraints below. |
+| `isArchived` | boolean | Not accepted on create. PATCH accepts only `false`, to restore a location. |
+| `addressLine1` | string \| null | Optional on create; see constraints below. |
+| `addressLine2` | string \| null | Optional on create; see constraints below. |
+| `city` | string \| null | Optional on create; see constraints below. |
+| `stateOrProvince` | string \| null | Optional on create; see constraints below. |
+| `postalCode` | string \| null | Optional on create; see constraints below. |
+| `country` | string \| null | `US`, `CA`. Optional on create; see constraints below. |
+| `latitude` | number \| null | Optional on create; see constraints below. |
+| `longitude` | number \| null | Optional on create; see constraints below. |
+| `timezone` | string \| null | Optional on create; see constraints below. |
+| `deliveryInstructions` | string \| null | Optional on create; see constraints below. |
+| `notes` | string \| null | Optional on create; see constraints below. |
+
+## Ownership and archiving
+
+Supply `name` and exactly one of `shopId` or `projectId` on create. Ownership cannot be changed by PATCH. Parent locations must belong to the same owner, and cycles are rejected. Supply latitude and longitude together.
+
+`DELETE /location/{id}` archives the location and its active descendants. To
+archive, use DELETE; PATCH accepts `isArchived: false` for restoration, but
+rejects `isArchived: true`. A restore targets the addressed record; do not
+assume it restores every descendant.

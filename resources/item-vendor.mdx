@@ -1,0 +1,32 @@
+---
+title: "Item vendors"
+description: "Supplier SKUs linked to items."
+---
+
+Base path: `/item-vendor` (relative to your instance’s `/api/v2`).
+
+The [standard endpoints](/guides/standard-endpoints) provide reads and writes, subject to the constraints below.
+
+**Search columns:** `vendorSku`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Optional on create; see constraints below. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `itemId` | uuid | Required on create. |
+| `vendorId` | uuid | Required on create. |
+| `vendorSku` | string \| null | Optional on create; see constraints below. |
+| `isArchived` | boolean | Optional on create; see constraints below. |
+| `vendorName` | string \| null | Read-only. |
+| `vendorCode` | string \| null | Read-only. |
+
+The pair `itemId` and `vendorId` identifies a supplier relationship. `vendorName` and `vendorCode` are read-only lookup fields. Use [vendors](/resources/vendor) for the supplier and [items](/resources/item) for the material.
+
+`isArchived` is a plain relationship flag. Archived relationships still appear
+in list and by-id reads unless you filter them, but they are excluded from an
+item's computed `vendorSkus`. `DELETE /item-vendor/{id}` hard-deletes only the
+relationship; it does not delete the item or vendor.

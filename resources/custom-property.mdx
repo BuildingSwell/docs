@@ -1,0 +1,109 @@
+---
+title: "Custom properties"
+description: "Organization property definitions and values on orders."
+---
+
+Base path: `/custom-property` (relative to your instance’s `/api/v2`).
+
+The [standard endpoints](/guides/standard-endpoints) provide reads and writes, subject to the constraints below.
+
+**Search columns:** `name`, `key`, `identifier`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Optional on create; see constraints below. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `isArchived` | boolean | Optional on create; see constraints below. |
+| `archivedAt` | date-time \| null | Read-only. |
+| `identifier` | string | Optional on create; see constraints below. |
+| `key` | string | Immutable storage key, unique case-insensitively even across archived definitions. Required on create. |
+| `name` | string | Required on create. |
+| `dataType` | string | `number`, `text`, `boolean`, `single_select`, `multi_select`. Required on create. |
+| `unitMeasureId` | uuid \| null | Optional on create; see constraints below. |
+| `deliverableTypes` | string[] | Optional on create; see constraints below. |
+| `options` | string[] | Optional on create; see constraints below. |
+| `allowsAdHocOptions` | boolean | Optional on create; see constraints below. |
+
+## Availability
+
+<Warning>
+  Your organization must have `customPropertiesEnabled` enabled. Catalog requests return `403` when it is disabled. In the current API, order writes containing `data.properties` still succeed but silently discard those incoming values when the flag is off. Existing stored values are preserved. Confirm enablement and read back a test write before relying on property writes.
+</Warning>
+
+API-key permissions must also allow the catalog or deliverable operation you are performing. Enabling the feature does not grant permissions.
+
+## Create a definition
+
+```http
+POST /custom-property
+Content-Type: application/json
+
+{ "key": "squareFeet", "name": "Square feet", "dataType": "number",
+  "deliverableTypes": ["order"] }
+```
+
+`key`, `name`, and `dataType` are required. A key starts with a letter, contains only letters and digits, and is at most 64 characters. Keys are immutable and unique case-insensitively across active **and archived** definitions. Use the exact stored key in order values. Display names can change and must be unique among active definitions.
+
+`deliverableTypes` defaults to `["order"]`; this is the only supported scope. `unitMeasureId` is allowed only for `number` properties. Select definitions use `options`, an ordered array of nonempty strings unique case-insensitively. `allowsAdHocOptions` defaults to `false` and applies only to select types.
+
+## Write values on an order
+
+```http
+PATCH /deliverable/<order-id>
+Content-Type: application/json
+
+{ "data": { "properties": { "squareFeet": 245.5 } } }
+```
+
+Values belong in `data.properties`, keyed by the definition's `key`, not its UUID or display name. Nonempty objects merge the supplied keys with existing values; omitted keys are preserved.
+
+| Definition type | Stored value |
+| --- | --- |
+| `number` | Finite JSON number. Numeric strings are converted to numbers. |
+| `text` | String. Numbers and booleans are converted to strings. |
+| `boolean` | Boolean. `true`/`false`, `yes`/`no`, `y`/`n`, and `1`/`0` strings are also accepted, case-insensitively; numeric 1/0 are accepted. |
+| `single_select` | One option string. |
+| `multi_select` | Array of option strings. |
+
+Option matching is case-insensitive and preserves the catalog's spelling. Unknown options fail unless `allowsAdHocOptions` is true, in which case they are appended to the catalog. Removing an option does not remove values already stored on orders; those values can still round-trip.
+
+Unknown property keys, invalid values, and nonempty values on unsupported deliverable types return `400`.
+
+## Clear values
+
+- Omit `data.properties` to leave all property values untouched.
+- Send `{ "data": { "properties": { "squareFeet": null } } }` to remove one value. An empty string or empty array also clears that key.
+- Send `{ "data": { "properties": {} } }` or `properties: null` to clear **all** values. An empty object is not a no-op.
+
+## Filter, select, and count
+
+```http
+GET /deliverable?type=order&data.properties.squareFeet=245.5
+GET /deliverable?type=order&select=id,name,data.properties.squareFeet
+```
+
+The dotted `select` field is returned as the flattened key
+`dataPropertiesSquareFeet`, rather than as a nested `data.properties` object.
+
+<Warning>
+  Range filters on custom-property paths are currently textual. For example,
+  `data.properties.squareFeet:gt=100` can treat `95` as greater than `100`.
+  Do not use `:gt`, `:ge`, `:lt`, or `:le` for numeric custom-property
+  reporting. Fetch the values and compare them numerically in your integration.
+</Warning>
+
+Use `POST /deliverable/group-and-count` with
+`groupByField: "data.properties.squareFeet"` when you want counts by exact
+stored value. SUM and AVG across deliverables are not exposed by this API;
+`POST /deliverable/query` rejects grouped reads. See
+[grouping and counting](/guides/group-and-count).
+
+## Archive and restore
+
+`DELETE /custom-property/{id}` archives the definition and returns `204`. It preserves order values and never frees the key. Restore with `PATCH /custom-property/{id}` and `{ "isArchived": false }`. If another active definition has taken the display name, rename while restoring. Bulk DELETE is forbidden.
+
+Archived definitions keep validating existing order data, but are excluded from the active catalog and property import/export columns. List archived definitions with `isArchived=true`.

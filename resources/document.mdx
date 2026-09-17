@@ -1,12 +1,13 @@
 ---
 title: "Document"
-description: "Files attached to orders and their deliverables."
+description: "Files, shared references, and version history."
 ---
 
-A document is a file attached to an order. It can also be scoped to one
-deliverable underneath that order.
+A document can be attached to an order or deliverable, or exist independently in Documents Hub. Hub links let several deliverables reference the same document and version history.
 
-Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+The generic endpoint supports reads, permanent DELETE, and archive/restore through
+`PATCH { "isArchived": true | false }`. Direct POST and PUT requests return
+`405`; create documents through Documents Hub or the deliverable tab.
 
 ## Fields
 
@@ -16,8 +17,14 @@ Every property the API returns for a document.
 | ----- | ---- | ----- |
 | `id` | UUID | Unique id. Generated on create unless you supply one. Server-managed. |
 | `organizationId` | UUID | Your organization. Taken from the API key, never from the request body. Read-only. |
-| `orderId` | UUID | Order the document hangs off. **Required on create.** |
+| `orderId` | UUID \| null | Optional legacy order/deliverable attachment. Hub documents can exist without an order. |
 | `name` | string | File name shown to readers. **Required on create.** |
+| `title` | string \| null | Display title, separate from the filename. |
+| `documentNumber` | string \| null | Document number. |
+| `currentVersionId` | UUID \| null | Current version pointer. Use version actions to maintain file metadata with it. |
+| `copyMode` | enum | `none`, `copy`, or `reference`. See copying below. |
+| `isArchived` | boolean | Archive state. |
+| `metadata` | object | Document metadata. |
 | `appUserId` | UUID \| null | Who uploaded the document. |
 | `documentUrl` | string \| null | Time-limited download link, generated on read. Do not store it. |
 | `documentKey` | string \| null | Storage key for the file. |
@@ -29,7 +36,9 @@ Every property the API returns for a document.
 
 ## Scoping and copying
 
-Two booleans control how a document behaves inside the work tree:
+`copyMode` controls propagation: `none` leaves the document in place, `copy` creates an independent copy, and `reference` links to the same document so revisions remain shared. When both are supplied, `copyMode` takes precedence over the legacy boolean.
+
+The legacy fields are:
 
 - `deliverableDocument` marks the file as belonging to one deliverable rather than
   the whole order.
@@ -39,30 +48,56 @@ Two booleans control how a document behaves inside the work tree:
 ## Download links
 
 `documentKey` is the durable storage key. `documentUrl` is a time-limited link
-generated when you read the record, so it expires: store the `key` and re-read the
+generated when you read the record, so it expires: store `documentKey` and re-read the
 document when you need a fresh link.
 
-## What you can write
+## Generic writes
 
-Everything else in the table above is set by BuildingSwell.
+`PATCH /document/{id}` and `PATCH /document/bulk?<filter>` accept exactly one
+field: `isArchived`. Any other field returns `400`. `POST /document`,
+`PUT /document/{id}`, and `PUT /document/bulk` return `405`, because those paths
+would bypass version and link bookkeeping.
 
-| Field | On create | On update |
-| ----- | --------- | --------- |
-| `orderId` | Required | Yes |
-| `name` | Required | Yes |
-| `appUserId` | Optional | Yes |
-| `documentUrl` | Optional | Yes |
-| `documentKey` | Optional | Yes |
-| `deliverableDocument` | Optional | Yes |
-| `copyWithDeliverable` | Optional | Yes |
-| `lastModifiedAt` | Optional | Yes |
+Use `POST /document/hub/bulk-upload` to create Hub documents, the version actions
+to change file metadata, link actions to attach documents, and the copy-mode
+action to change propagation behavior.
 
 ## Deleting
 
 <Warning>
   **`DELETE /document/{id}` is destructive.**
 
-  Permanently removes the document record. This cannot be undone and there is no archive for documents.
+  Permanently removes the document record. This cannot be undone. To retain history, archive with `PATCH /document/{id}` and `{ "isArchived": true }`, and restore with `false`.
 </Warning>
 
 See [archiving and deleting](/guides/archiving-and-deleting) for the full picture across resources.
+
+## Documents Hub and versions
+
+Hub endpoints require your organization's `documentsHubEnabled` flag. Without it,
+generic reads, permanent DELETE, and archive/restore remain available. Version
+writes require document update permission. Attaching a link requires document
+read and target deliverable update permission.
+
+Generic list and by-id reads default to `deliverableDocument=true`. Hub-only
+documents are therefore omitted from `GET /document` and can return `404` from
+`GET /document/{id}`. Use the Hub endpoints for Hub documents, or pass an
+explicit `deliverableDocument` filter on the generic list endpoint.
+
+| Endpoint | Request and response |
+| --- | --- |
+| `GET /document/hub` | `{ values, hasMore }`; page size defaults to 100 and is capped at 200. Use `archived=true` for the archived view. Search matches title, number, filename, or uploader. |
+| `GET /document/{id}/hub-detail` | `{ value }` with the document, versions, links, and provenance. |
+| `POST /document/hub/bulk-upload` | Array of 1–20 `{ name, documentKey, lastModifiedAt?, folderName? }` objects. Registers files already in storage and deduplicates existing keys; returns `201 { values }`, with `{ id, name, documentKey }` per item. |
+| `POST /document/{id}/versions` | `{ name, documentKey?, documentUrl?, versionLabel?, mimeType?, lastModifiedAt? }`; returns `201 { value }` with the version. |
+| `POST /document/{id}/versions/{versionId}/archive` | No body; returns `{ value: { id, isArchived, currentVersionId } }`. |
+| `POST /document/{id}/versions/{versionId}/set-current` | No body; returns `{ value: { id, currentVersionId } }`. |
+| `POST /document/{id}/links` | `{ "entityType": "deliverable", "entityId": "<uuid>" }`; returns `201 { value }` with the link. |
+| `DELETE /document/links/{linkId}` | Removes the link, preserving the document; returns `204`. |
+| `POST /document/{id}/copy-mode` | `{ "copyMode": "none" }`, `copy`, or `reference`; returns `{ value }`. |
+
+Creating a version requires `name` and at least one of `documentKey` or `documentUrl`. The new version becomes current and updates the document’s file metadata.
+
+Versions include `id`, `documentId`, `versionLabel`, `name`, `documentKey`, `documentUrl`, `mimeType`, `lastModifiedAt`, `metadata`, `isArchived`, `appUserId`, and standard organization/timestamp fields. Re-read download URLs when needed; they can expire.
+
+`POST /document/counts-by-deliverable` accepts `{ "deliverableIds": ["<uuid>"] }` (maximum 1,000 IDs). It returns `{ "values": [{ "groupId": "<deliverable-id>", "count": 2 }] }`, works with or without Documents Hub, and counts only accessible deliverables.

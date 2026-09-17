@@ -1,0 +1,27 @@
+---
+title: "Project contacts"
+description: "Links between projects and contacts."
+---
+
+Base path: `/project-contact` (relative to your instance’s `/api/v2`).
+
+The [standard endpoints](/guides/standard-endpoints) provide reads and writes, subject to the constraints below.
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Optional on create; see constraints below. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `projectId` | uuid | Required on create. |
+| `contactId` | uuid | Required on create. |
+| `role` | string \| null | Optional on create; see constraints below. |
+| `isArchived` | boolean | Read-only. |
+| `contactName` | string \| null | Read-only. |
+| `contactEmail` | string \| null | Read-only. |
+| `contactPhone` | string \| null | Read-only. |
+| `contactCompany` | string \| null | Read-only. |
+
+Supply `projectId` and `contactId` on create; `role` is optional. The contact details are read-only projections. Writes require contact update permission. Deleting this relationship removes the link, not the contact or project.
