@@ -25,4 +25,8 @@ The standard list, single-record read, query, count, and group-and-count endpoin
 
 Each reservation belongs to exactly one `deliverableId` or `projectId`. `quantityConsumed` records the used portion; statuses are `open`, `fulfilled`, and `cancelled`.
 
+`isArchived` is an internal lifecycle flag, but this read-only model does not
+hide archived rows by default. Filter with `isArchived=false` when you only want
+active reservations.
+
 Generic writes are not registered. Reserve through `POST /bom-line/order/{id}/allocate` or `POST /bom-line/project/{id}/allocate`. Consumption and release commands maintain reservations. See [BOM lines](/resources/bom-line).

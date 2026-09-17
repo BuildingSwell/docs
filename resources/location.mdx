@@ -24,7 +24,7 @@ The [standard endpoints](/guides/standard-endpoints) provide reads and writes, s
 | `code` | string \| null | Optional on create; see constraints below. |
 | `type` | string | `storage`, `staging`, `in_transit`, `yard`, `build_bay`, `station`, `rack`, `bay`, `booth`, `cell`, `shelf`, `zone`, `work_center`, `site`. Optional on create; see constraints below. |
 | `metadata` | object | Optional on create; see constraints below. |
-| `isArchived` | boolean | Read-only. |
+| `isArchived` | boolean | Not accepted on create. PATCH accepts only `false`, to restore a location. |
 | `addressLine1` | string \| null | Optional on create; see constraints below. |
 | `addressLine2` | string \| null | Optional on create; see constraints below. |
 | `city` | string \| null | Optional on create; see constraints below. |
@@ -41,4 +41,7 @@ The [standard endpoints](/guides/standard-endpoints) provide reads and writes, s
 
 Supply `name` and exactly one of `shopId` or `projectId` on create. Ownership cannot be changed by PATCH. Parent locations must belong to the same owner, and cycles are rejected. Supply latitude and longitude together.
 
-`DELETE /location/{id}` archives the location and its active descendants. To archive, use DELETE; PATCH accepts `isArchived: false` for restoration, but rejects `isArchived: true`. Project-owned Jobsite and referenced locations have additional lifecycle constraints. A restore targets the addressed record; do not assume it restores every descendant.
+`DELETE /location/{id}` archives the location and its active descendants. To
+archive, use DELETE; PATCH accepts `isArchived: false` for restoration, but
+rejects `isArchived: true`. A restore targets the addressed record; do not
+assume it restores every descendant.

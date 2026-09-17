@@ -1264,6 +1264,7 @@ paths:
                   type: string
                   enum:
                   - project
+                  - phase
                   - stage
                   - people
                   - root
@@ -2597,40 +2598,6 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
-    post:
-      tags:
-      - Documents
-      summary: Create a document
-      description: Create one document, or several at once by sending an array.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              oneOf:
-              - $ref: '#/components/schemas/DocumentCreate'
-              - type: array
-                items:
-                  $ref: '#/components/schemas/DocumentCreate'
-      responses:
-        '200':
-          description: The created document. An array request returns `values` instead of `value`.
-          content:
-            application/json:
-              schema:
-                oneOf:
-                - $ref: '#/components/schemas/DocumentSingleResponse'
-                - $ref: '#/components/schemas/DocumentMultiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
   /document/count:
     get:
       tags:
@@ -2742,11 +2709,8 @@ paths:
     patch:
       tags:
       - Documents
-      summary: Update many documents
-      description: |-
-        Apply one set of changes to every document matching your filter.
-
-        The filter must be in the **query string**. A filter in the body is ignored, and a request with no filter is rejected with `400` so you cannot update the whole table by accident.
+      summary: Archive or restore matching documents
+      description: Set `isArchived` on every document matching the required filter. No other field is accepted.
       parameters:
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
@@ -2759,39 +2723,6 @@ paths:
       responses:
         '200':
           description: The updated documents.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DocumentMultiResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    put:
-      tags:
-      - Documents
-      summary: Upsert many documents
-      description: |-
-        Insert or update many documents in one call. `update` is required: it lists the columns to overwrite when a row with a conflicting unique key already exists.
-      parameters:
-      - $ref: '#/components/parameters/update'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/DocumentCreate'
-      responses:
-        '200':
-          description: The upserted documents.
           content:
             application/json:
               schema:
@@ -2844,8 +2775,8 @@ paths:
     patch:
       tags:
       - Documents
-      summary: Update a document
-      description: Change one document. Only the fields you send are touched.
+      summary: Archive or restore a document
+      description: Set `isArchived` to archive or restore one document. No other field is accepted.
       parameters:
       - $ref: '#/components/parameters/id'
       requestBody:
@@ -2857,40 +2788,6 @@ paths:
       responses:
         '200':
           description: The updated document.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DocumentSingleResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/RateLimited'
-    put:
-      tags:
-      - Documents
-      summary: Upsert a document
-      description: |-
-        Insert the document, or update it when a row with a conflicting unique key already exists. `update` is required and lists which columns to overwrite on conflict.
-      parameters:
-      - $ref: '#/components/parameters/id'
-      - $ref: '#/components/parameters/update'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DocumentCreate'
-      responses:
-        '200':
-          description: The upserted document.
           content:
             application/json:
               schema:
@@ -6687,7 +6584,7 @@ paths:
     post:
       tags:
       - Items
-      summary: Create items
+      summary: Create one or more items
       responses:
         '201':
           description: Successful response.
@@ -6699,12 +6596,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/Item'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/Item'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -6713,6 +6614,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Material and part definitions, purchasing units, and availability. See the resource guide
         for ownership and lifecycle constraints.
       requestBody:
@@ -6729,7 +6632,7 @@ paths:
     get:
       tags:
       - Items
-      summary: Get items record
+      summary: Get an item
       responses:
         '200':
           description: Successful response.
@@ -6748,23 +6651,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
     patch:
       tags:
       - Items
-      summary: Update items
+      summary: Update an item
       responses:
         '200':
           description: Successful response.
@@ -6783,13 +6678,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -6799,7 +6693,7 @@ paths:
     put:
       tags:
       - Items
-      summary: Upsert items
+      summary: Upsert an item
       responses:
         '200':
           description: Successful response.
@@ -6818,19 +6712,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -6840,20 +6728,25 @@ paths:
     delete:
       tags:
       - Items
-      summary: Archive items record
+      summary: Delete an item
       description: Archives the record; see the resource guide for restoration and constraints.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /item/query:
     post:
       tags:
@@ -6911,16 +6804,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Items
-      summary: Count items
+      summary: Count items with a request body
       responses:
         '200':
           description: Successful response.
@@ -6949,7 +6838,7 @@ paths:
     post:
       tags:
       - Items
-      summary: Group items
+      summary: Group and count items
       responses:
         '200':
           description: Successful response.
@@ -6996,11 +6885,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: A filter is required.
@@ -7034,12 +6921,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -7052,7 +6937,7 @@ paths:
     get:
       tags:
       - Item vendors
-      summary: List item vendors
+      summary: List item-vendor links
       responses:
         '200':
           description: Successful response.
@@ -7085,7 +6970,7 @@ paths:
     post:
       tags:
       - Item vendors
-      summary: Create item vendors
+      summary: Create one or more item-vendor links
       responses:
         '201':
           description: Successful response.
@@ -7097,12 +6982,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/ItemVendor'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/ItemVendor'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -7111,6 +7000,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Supplier SKUs linked to items. See the resource guide for ownership and lifecycle constraints.
       requestBody:
         required: true
@@ -7126,7 +7017,7 @@ paths:
     get:
       tags:
       - Item vendors
-      summary: Get item vendors record
+      summary: Get an item-vendor link
       responses:
         '200':
           description: Successful response.
@@ -7145,23 +7036,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
     patch:
       tags:
       - Item vendors
-      summary: Update item vendors
+      summary: Update an item-vendor link
       responses:
         '200':
           description: Successful response.
@@ -7180,13 +7063,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -7196,7 +7078,7 @@ paths:
     put:
       tags:
       - Item vendors
-      summary: Upsert item vendors
+      summary: Upsert an item-vendor link
       responses:
         '200':
           description: Successful response.
@@ -7215,19 +7097,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -7237,25 +7113,30 @@ paths:
     delete:
       tags:
       - Item vendors
-      summary: Delete item vendors record
-      description: See the resource guide for deletion constraints. Prefer archival for records with history.
+      summary: Permanently delete an item-vendor link
+      description: Hard-deletes the relationship row.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /item-vendor/query:
     post:
       tags:
       - Item vendors
-      summary: Query item vendors
+      summary: Query item-vendor links
       responses:
         '200':
           description: Successful response.
@@ -7288,7 +7169,7 @@ paths:
     get:
       tags:
       - Item vendors
-      summary: Count item vendors
+      summary: Count item-vendor links
       responses:
         '200':
           description: Successful response.
@@ -7308,16 +7189,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Item vendors
-      summary: Count item vendors
+      summary: Count item-vendor links with a request body
       responses:
         '200':
           description: Successful response.
@@ -7346,7 +7223,7 @@ paths:
     post:
       tags:
       - Item vendors
-      summary: Group item vendors
+      summary: Group and count item-vendor links
       responses:
         '200':
           description: Successful response.
@@ -7372,7 +7249,7 @@ paths:
     patch:
       tags:
       - Item vendors
-      summary: Update matching item vendors
+      summary: Update matching item-vendor links
       responses:
         '200':
           description: Successful response.
@@ -7393,11 +7270,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: A filter is required.
@@ -7410,7 +7285,7 @@ paths:
     put:
       tags:
       - Item vendors
-      summary: Upsert multiple item vendors
+      summary: Upsert multiple item-vendor links
       responses:
         '200':
           description: Successful response.
@@ -7431,12 +7306,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -7449,7 +7322,7 @@ paths:
     get:
       tags:
       - Inventory stock
-      summary: List inventory stock
+      summary: List inventory stock rows
       responses:
         '200':
           description: Successful response.
@@ -7483,7 +7356,7 @@ paths:
     get:
       tags:
       - Inventory stock
-      summary: Get inventory stock record
+      summary: Get an inventory stock row
       responses:
         '200':
           description: Successful response.
@@ -7502,25 +7375,17 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
       description: Read-only resource. Generic mutations are not registered.
   /inventory-stock/query:
     post:
       tags:
       - Inventory stock
-      summary: Query inventory stock
+      summary: Query inventory stock rows
       responses:
         '200':
           description: Successful response.
@@ -7553,7 +7418,7 @@ paths:
     get:
       tags:
       - Inventory stock
-      summary: Count inventory stock
+      summary: Count inventory stock rows
       responses:
         '200':
           description: Successful response.
@@ -7573,16 +7438,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Inventory stock
-      summary: Count inventory stock
+      summary: Count inventory stock rows with a request body
       responses:
         '200':
           description: Successful response.
@@ -7611,7 +7472,7 @@ paths:
     post:
       tags:
       - Inventory stock
-      summary: Group inventory stock
+      summary: Group and count inventory stock rows
       responses:
         '200':
           description: Successful response.
@@ -7670,7 +7531,7 @@ paths:
     post:
       tags:
       - Inventory transactions
-      summary: Post an inventory transaction
+      summary: Create one or more inventory transactions
       responses:
         '201':
           description: Successful response.
@@ -7689,6 +7550,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: One object only. Requires item update permission. Use receiving and production commands
         for other ledger types.
       requestBody:
@@ -7769,7 +7632,7 @@ paths:
     get:
       tags:
       - Inventory transactions
-      summary: Get inventory transactions record
+      summary: Get an inventory transaction
       responses:
         '200':
           description: Successful response.
@@ -7788,19 +7651,11 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
   /inventory-transaction/query:
     post:
       tags:
@@ -7858,16 +7713,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Inventory transactions
-      summary: Count inventory transactions
+      summary: Count inventory transactions with a request body
       responses:
         '200':
           description: Successful response.
@@ -7896,7 +7747,7 @@ paths:
     post:
       tags:
       - Inventory transactions
-      summary: Group inventory transactions
+      summary: Group and count inventory transactions
       responses:
         '200':
           description: Successful response.
@@ -7956,7 +7807,7 @@ paths:
     get:
       tags:
       - Inventory allocations
-      summary: Get inventory allocations record
+      summary: Get an inventory allocation
       responses:
         '200':
           description: Successful response.
@@ -7975,19 +7826,11 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
       description: Read-only resource. Generic mutations are not registered.
   /inventory-allocation/query:
     post:
@@ -8046,16 +7889,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Inventory allocations
-      summary: Count inventory allocations
+      summary: Count inventory allocations with a request body
       responses:
         '200':
           description: Successful response.
@@ -8084,7 +7923,7 @@ paths:
     post:
       tags:
       - Inventory allocations
-      summary: Group inventory allocations
+      summary: Group and count inventory allocations
       responses:
         '200':
           description: Successful response.
@@ -8110,7 +7949,7 @@ paths:
     get:
       tags:
       - BOM lines
-      summary: List bom lines
+      summary: List BOM lines
       responses:
         '200':
           description: Successful response.
@@ -8143,7 +7982,7 @@ paths:
     post:
       tags:
       - BOM lines
-      summary: Create bom lines
+      summary: Create one or more BOM lines
       responses:
         '201':
           description: Successful response.
@@ -8155,12 +7994,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/BomLine'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/BomLine'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -8169,6 +8012,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Planned material inputs for routes, orders, and projects. See the resource guide for
         ownership and lifecycle constraints.
       requestBody:
@@ -8185,7 +8030,7 @@ paths:
     get:
       tags:
       - BOM lines
-      summary: Get bom lines record
+      summary: Get a BOM line
       responses:
         '200':
           description: Successful response.
@@ -8204,23 +8049,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
     patch:
       tags:
       - BOM lines
-      summary: Update bom lines
+      summary: Update a BOM line
       responses:
         '200':
           description: Successful response.
@@ -8239,13 +8076,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -8255,7 +8091,7 @@ paths:
     put:
       tags:
       - BOM lines
-      summary: Upsert bom lines
+      summary: Upsert a BOM line
       responses:
         '200':
           description: Successful response.
@@ -8274,19 +8110,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -8296,25 +8126,30 @@ paths:
     delete:
       tags:
       - BOM lines
-      summary: Archive bom lines record
+      summary: Delete a BOM line
       description: Archives the record; see the resource guide for restoration and constraints.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /bom-line/query:
     post:
       tags:
       - BOM lines
-      summary: Query bom lines
+      summary: Query BOM lines
       responses:
         '200':
           description: Successful response.
@@ -8347,7 +8182,7 @@ paths:
     get:
       tags:
       - BOM lines
-      summary: Count bom lines
+      summary: Count BOM lines
       responses:
         '200':
           description: Successful response.
@@ -8367,16 +8202,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - BOM lines
-      summary: Count bom lines
+      summary: Count BOM lines with a request body
       responses:
         '200':
           description: Successful response.
@@ -8405,7 +8236,7 @@ paths:
     post:
       tags:
       - BOM lines
-      summary: Group bom lines
+      summary: Group and count BOM lines
       responses:
         '200':
           description: Successful response.
@@ -8431,7 +8262,7 @@ paths:
     patch:
       tags:
       - BOM lines
-      summary: Update matching bom lines
+      summary: Update matching BOM lines
       responses:
         '200':
           description: Successful response.
@@ -8452,11 +8283,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: A filter is required.
@@ -8469,7 +8298,7 @@ paths:
     put:
       tags:
       - BOM lines
-      summary: Upsert multiple bom lines
+      summary: Upsert multiple BOM lines
       responses:
         '200':
           description: Successful response.
@@ -8490,12 +8319,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -8541,7 +8368,7 @@ paths:
     post:
       tags:
       - Production outputs
-      summary: Create production outputs
+      summary: Create one or more production outputs
       responses:
         '201':
           description: Successful response.
@@ -8553,12 +8380,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/ProductionOutput'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/ProductionOutput'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -8567,6 +8398,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Declarations of manufactured outputs. See the resource guide for ownership and lifecycle
         constraints.
       requestBody:
@@ -8583,7 +8416,7 @@ paths:
     get:
       tags:
       - Production outputs
-      summary: Get production outputs record
+      summary: Get a production output
       responses:
         '200':
           description: Successful response.
@@ -8602,23 +8435,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
     patch:
       tags:
       - Production outputs
-      summary: Update production outputs
+      summary: Update a production output
       responses:
         '200':
           description: Successful response.
@@ -8637,13 +8462,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -8653,7 +8477,7 @@ paths:
     put:
       tags:
       - Production outputs
-      summary: Upsert production outputs
+      summary: Upsert a production output
       responses:
         '200':
           description: Successful response.
@@ -8672,19 +8496,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -8694,20 +8512,25 @@ paths:
     delete:
       tags:
       - Production outputs
-      summary: Archive production outputs record
+      summary: Delete a production output
       description: Archives the record; see the resource guide for restoration and constraints.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /production-output/query:
     post:
       tags:
@@ -8765,16 +8588,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Production outputs
-      summary: Count production outputs
+      summary: Count production outputs with a request body
       responses:
         '200':
           description: Successful response.
@@ -8803,7 +8622,7 @@ paths:
     post:
       tags:
       - Production outputs
-      summary: Group production outputs
+      summary: Group and count production outputs
       responses:
         '200':
           description: Successful response.
@@ -8850,11 +8669,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: A filter is required.
@@ -8888,12 +8705,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -8939,7 +8754,7 @@ paths:
     post:
       tags:
       - Units of measure
-      summary: Create units of measure
+      summary: Create one or more units of measure
       responses:
         '201':
           description: Successful response.
@@ -8951,12 +8766,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/UnitMeasure'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/UnitMeasure'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -8965,6 +8784,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Reusable names and abbreviations for quantities. See the resource guide for ownership
         and lifecycle constraints.
       requestBody:
@@ -8981,7 +8802,7 @@ paths:
     get:
       tags:
       - Units of measure
-      summary: Get units of measure record
+      summary: Get a unit of measure
       responses:
         '200':
           description: Successful response.
@@ -9000,23 +8821,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
     patch:
       tags:
       - Units of measure
-      summary: Update units of measure
+      summary: Update a unit of measure
       responses:
         '200':
           description: Successful response.
@@ -9035,13 +8848,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -9051,7 +8863,7 @@ paths:
     put:
       tags:
       - Units of measure
-      summary: Upsert units of measure
+      summary: Upsert a unit of measure
       responses:
         '200':
           description: Successful response.
@@ -9070,19 +8882,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -9092,20 +8898,25 @@ paths:
     delete:
       tags:
       - Units of measure
-      summary: Archive units of measure record
+      summary: Delete a unit of measure
       description: Archives the record; see the resource guide for restoration and constraints.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /unit-measure/query:
     post:
       tags:
@@ -9163,16 +8974,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Units of measure
-      summary: Count units of measure
+      summary: Count units of measure with a request body
       responses:
         '200':
           description: Successful response.
@@ -9201,7 +9008,7 @@ paths:
     post:
       tags:
       - Units of measure
-      summary: Group units of measure
+      summary: Group and count units of measure
       responses:
         '200':
           description: Successful response.
@@ -9248,11 +9055,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: A filter is required.
@@ -9286,12 +9091,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -9337,7 +9140,7 @@ paths:
     post:
       tags:
       - Vendors
-      summary: Create vendors
+      summary: Create one or more vendors
       responses:
         '201':
           description: Successful response.
@@ -9349,12 +9152,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/Vendor'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/Vendor'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -9363,6 +9170,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Suppliers, manufacturers, and subcontractors. See the resource guide for ownership and
         lifecycle constraints.
       requestBody:
@@ -9379,7 +9188,7 @@ paths:
     get:
       tags:
       - Vendors
-      summary: Get vendors record
+      summary: Get a vendor
       responses:
         '200':
           description: Successful response.
@@ -9398,23 +9207,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
     patch:
       tags:
       - Vendors
-      summary: Update vendors
+      summary: Update a vendor
       responses:
         '200':
           description: Successful response.
@@ -9433,13 +9234,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -9449,7 +9249,7 @@ paths:
     put:
       tags:
       - Vendors
-      summary: Upsert vendors
+      summary: Upsert a vendor
       responses:
         '200':
           description: Successful response.
@@ -9468,19 +9268,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -9490,20 +9284,25 @@ paths:
     delete:
       tags:
       - Vendors
-      summary: Archive vendors record
+      summary: Delete a vendor
       description: Archives the record; see the resource guide for restoration and constraints.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /vendor/query:
     post:
       tags:
@@ -9561,16 +9360,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Vendors
-      summary: Count vendors
+      summary: Count vendors with a request body
       responses:
         '200':
           description: Successful response.
@@ -9599,7 +9394,7 @@ paths:
     post:
       tags:
       - Vendors
-      summary: Group vendors
+      summary: Group and count vendors
       responses:
         '200':
           description: Successful response.
@@ -9646,11 +9441,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: A filter is required.
@@ -9684,12 +9477,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -9735,7 +9526,7 @@ paths:
     post:
       tags:
       - Locations
-      summary: Create locations
+      summary: Create one or more locations
       responses:
         '201':
           description: Successful response.
@@ -9747,12 +9538,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/Location'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/Location'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -9761,6 +9556,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Department and project locations for storage and delivery. See the resource guide for
         ownership and lifecycle constraints.
       requestBody:
@@ -9777,7 +9574,7 @@ paths:
     get:
       tags:
       - Locations
-      summary: Get locations record
+      summary: Get a location
       responses:
         '200':
           description: Successful response.
@@ -9796,23 +9593,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
     patch:
       tags:
       - Locations
-      summary: Update locations
+      summary: Update a location
       responses:
         '200':
           description: Successful response.
@@ -9831,13 +9620,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -9847,7 +9635,7 @@ paths:
     put:
       tags:
       - Locations
-      summary: Upsert locations
+      summary: Upsert a location
       responses:
         '200':
           description: Successful response.
@@ -9866,19 +9654,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -9888,20 +9670,25 @@ paths:
     delete:
       tags:
       - Locations
-      summary: Archive locations record
+      summary: Delete a location
       description: Archives the record; see the resource guide for restoration and constraints.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /location/query:
     post:
       tags:
@@ -9959,16 +9746,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Locations
-      summary: Count locations
+      summary: Count locations with a request body
       responses:
         '200':
           description: Successful response.
@@ -9997,7 +9780,7 @@ paths:
     post:
       tags:
       - Locations
-      summary: Group locations
+      summary: Group and count locations
       responses:
         '200':
           description: Successful response.
@@ -10044,11 +9827,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: A filter is required.
@@ -10082,12 +9863,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -10133,7 +9912,7 @@ paths:
     post:
       tags:
       - Deliveries
-      summary: Create deliveries
+      summary: Create one or more deliveries
       responses:
         '201':
           description: Successful response.
@@ -10145,12 +9924,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/Delivery'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/Delivery'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -10159,6 +9942,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Inbound receipts, outbound trips, and transfers. See the resource guide for ownership
         and lifecycle constraints.
       requestBody:
@@ -10175,7 +9960,7 @@ paths:
     get:
       tags:
       - Deliveries
-      summary: Get deliveries record
+      summary: Get a delivery
       responses:
         '200':
           description: Successful response.
@@ -10194,23 +9979,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
     patch:
       tags:
       - Deliveries
-      summary: Update deliveries
+      summary: Update a delivery
       responses:
         '200':
           description: Successful response.
@@ -10229,13 +10006,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -10245,7 +10021,7 @@ paths:
     put:
       tags:
       - Deliveries
-      summary: Upsert deliveries
+      summary: Upsert a delivery
       responses:
         '200':
           description: Successful response.
@@ -10264,19 +10040,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -10286,20 +10056,26 @@ paths:
     delete:
       tags:
       - Deliveries
-      summary: Delete deliveries record
-      description: See the resource guide for deletion constraints. Prefer archival for records with history.
+      summary: Permanently delete a delivery
+      description: Hard-deletes the delivery and its lines, stops, legs, and cargo spans. A paired delivery
+        group is retained.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /delivery/query:
     post:
       tags:
@@ -10357,16 +10133,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Deliveries
-      summary: Count deliveries
+      summary: Count deliveries with a request body
       responses:
         '200':
           description: Successful response.
@@ -10395,7 +10167,7 @@ paths:
     post:
       tags:
       - Deliveries
-      summary: Group deliveries
+      summary: Group and count deliveries
       responses:
         '200':
           description: Successful response.
@@ -10442,11 +10214,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: A filter is required.
@@ -10480,12 +10250,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -10531,7 +10299,7 @@ paths:
     post:
       tags:
       - Delivery lines
-      summary: Create delivery lines
+      summary: Create one or more delivery lines
       responses:
         '201':
           description: Successful response.
@@ -10543,12 +10311,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/DeliveryLine'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/DeliveryLine'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -10557,6 +10329,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Material and ad-hoc manifest lines. See the resource guide for ownership and lifecycle
         constraints.
       requestBody:
@@ -10573,7 +10347,7 @@ paths:
     get:
       tags:
       - Delivery lines
-      summary: Get delivery lines record
+      summary: Get a delivery line
       responses:
         '200':
           description: Successful response.
@@ -10592,23 +10366,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
     patch:
       tags:
       - Delivery lines
-      summary: Update delivery lines
+      summary: Update a delivery line
       responses:
         '200':
           description: Successful response.
@@ -10627,13 +10393,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -10643,7 +10408,7 @@ paths:
     put:
       tags:
       - Delivery lines
-      summary: Upsert delivery lines
+      summary: Upsert a delivery line
       responses:
         '200':
           description: Successful response.
@@ -10662,19 +10427,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -10684,20 +10443,25 @@ paths:
     delete:
       tags:
       - Delivery lines
-      summary: Archive delivery lines record
+      summary: Delete a delivery line
       description: Archives the record; see the resource guide for restoration and constraints.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /delivery-line/query:
     post:
       tags:
@@ -10755,16 +10519,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Delivery lines
-      summary: Count delivery lines
+      summary: Count delivery lines with a request body
       responses:
         '200':
           description: Successful response.
@@ -10793,7 +10553,7 @@ paths:
     post:
       tags:
       - Delivery lines
-      summary: Group delivery lines
+      summary: Group and count delivery lines
       responses:
         '200':
           description: Successful response.
@@ -10840,11 +10600,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: A filter is required.
@@ -10878,12 +10636,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -10929,7 +10685,7 @@ paths:
     post:
       tags:
       - Trucks
-      summary: Create trucks
+      summary: Create one or more trucks
       responses:
         '201':
           description: Successful response.
@@ -10941,12 +10697,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/Truck'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/Truck'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -10955,6 +10715,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Fleet vehicles and their capacity. See the resource guide for ownership and lifecycle
         constraints.
       requestBody:
@@ -10971,7 +10733,7 @@ paths:
     get:
       tags:
       - Trucks
-      summary: Get trucks record
+      summary: Get a truck
       responses:
         '200':
           description: Successful response.
@@ -10990,23 +10752,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
     patch:
       tags:
       - Trucks
-      summary: Update trucks
+      summary: Update a truck
       responses:
         '200':
           description: Successful response.
@@ -11025,13 +10779,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -11041,7 +10794,7 @@ paths:
     put:
       tags:
       - Trucks
-      summary: Upsert trucks
+      summary: Upsert a truck
       responses:
         '200':
           description: Successful response.
@@ -11060,19 +10813,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -11082,20 +10829,25 @@ paths:
     delete:
       tags:
       - Trucks
-      summary: Archive trucks record
+      summary: Delete a truck
       description: Archives the record; see the resource guide for restoration and constraints.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /truck/query:
     post:
       tags:
@@ -11153,16 +10905,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Trucks
-      summary: Count trucks
+      summary: Count trucks with a request body
       responses:
         '200':
           description: Successful response.
@@ -11191,7 +10939,7 @@ paths:
     post:
       tags:
       - Trucks
-      summary: Group trucks
+      summary: Group and count trucks
       responses:
         '200':
           description: Successful response.
@@ -11238,11 +10986,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: A filter is required.
@@ -11276,12 +11022,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -11327,7 +11071,7 @@ paths:
     post:
       tags:
       - Contacts
-      summary: Create contacts
+      summary: Create one or more contacts
       responses:
         '201':
           description: Successful response.
@@ -11339,12 +11083,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/Contact'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/Contact'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -11353,6 +11101,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Drivers, receivers, and other business contacts. See the resource guide for ownership
         and lifecycle constraints.
       requestBody:
@@ -11369,7 +11119,7 @@ paths:
     get:
       tags:
       - Contacts
-      summary: Get contacts record
+      summary: Get a contact
       responses:
         '200':
           description: Successful response.
@@ -11388,23 +11138,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
     patch:
       tags:
       - Contacts
-      summary: Update contacts
+      summary: Update a contact
       responses:
         '200':
           description: Successful response.
@@ -11423,13 +11165,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -11439,7 +11180,7 @@ paths:
     put:
       tags:
       - Contacts
-      summary: Upsert contacts
+      summary: Upsert a contact
       responses:
         '200':
           description: Successful response.
@@ -11458,19 +11199,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -11480,20 +11215,25 @@ paths:
     delete:
       tags:
       - Contacts
-      summary: Archive contacts record
+      summary: Delete a contact
       description: Archives the record; see the resource guide for restoration and constraints.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /contact/query:
     post:
       tags:
@@ -11551,16 +11291,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Contacts
-      summary: Count contacts
+      summary: Count contacts with a request body
       responses:
         '200':
           description: Successful response.
@@ -11589,7 +11325,7 @@ paths:
     post:
       tags:
       - Contacts
-      summary: Group contacts
+      summary: Group and count contacts
       responses:
         '200':
           description: Successful response.
@@ -11636,11 +11372,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: A filter is required.
@@ -11674,12 +11408,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -11692,7 +11424,7 @@ paths:
     get:
       tags:
       - Project contacts
-      summary: List project contacts
+      summary: List project-contact links
       responses:
         '200':
           description: Successful response.
@@ -11725,7 +11457,7 @@ paths:
     post:
       tags:
       - Project contacts
-      summary: Create project contacts
+      summary: Create one or more project-contact links
       responses:
         '201':
           description: Successful response.
@@ -11737,12 +11469,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/ProjectContact'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/ProjectContact'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -11751,6 +11487,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Links between projects and contacts. See the resource guide for ownership and lifecycle
         constraints.
       requestBody:
@@ -11767,7 +11505,7 @@ paths:
     get:
       tags:
       - Project contacts
-      summary: Get project contacts record
+      summary: Get a project-contact link
       responses:
         '200':
           description: Successful response.
@@ -11786,23 +11524,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
     patch:
       tags:
       - Project contacts
-      summary: Update project contacts
+      summary: Update a project-contact link
       responses:
         '200':
           description: Successful response.
@@ -11821,13 +11551,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -11837,7 +11566,7 @@ paths:
     put:
       tags:
       - Project contacts
-      summary: Upsert project contacts
+      summary: Upsert a project-contact link
       responses:
         '200':
           description: Successful response.
@@ -11856,19 +11585,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -11878,25 +11601,30 @@ paths:
     delete:
       tags:
       - Project contacts
-      summary: Delete project contacts record
-      description: See the resource guide for deletion constraints. Prefer archival for records with history.
+      summary: Permanently delete a project-contact link
+      description: Hard-deletes the relationship row.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /project-contact/query:
     post:
       tags:
       - Project contacts
-      summary: Query project contacts
+      summary: Query project-contact links
       responses:
         '200':
           description: Successful response.
@@ -11929,7 +11657,7 @@ paths:
     get:
       tags:
       - Project contacts
-      summary: Count project contacts
+      summary: Count project-contact links
       responses:
         '200':
           description: Successful response.
@@ -11949,16 +11677,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Project contacts
-      summary: Count project contacts
+      summary: Count project-contact links with a request body
       responses:
         '200':
           description: Successful response.
@@ -11987,7 +11711,7 @@ paths:
     post:
       tags:
       - Project contacts
-      summary: Group project contacts
+      summary: Group and count project-contact links
       responses:
         '200':
           description: Successful response.
@@ -12013,7 +11737,7 @@ paths:
     patch:
       tags:
       - Project contacts
-      summary: Update matching project contacts
+      summary: Update matching project-contact links
       responses:
         '200':
           description: Successful response.
@@ -12034,11 +11758,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: A filter is required.
@@ -12051,7 +11773,7 @@ paths:
     put:
       tags:
       - Project contacts
-      summary: Upsert multiple project contacts
+      summary: Upsert multiple project-contact links
       responses:
         '200':
           description: Successful response.
@@ -12072,12 +11794,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -12124,7 +11844,7 @@ paths:
     get:
       tags:
       - Teams
-      summary: Get teams record
+      summary: Get a team
       responses:
         '200':
           description: Successful response.
@@ -12143,19 +11863,11 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
       description: Read-only resource. Generic mutations are not registered.
   /team/query:
     post:
@@ -12214,16 +11926,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Teams
-      summary: Count teams
+      summary: Count teams with a request body
       responses:
         '200':
           description: Successful response.
@@ -12252,7 +11960,7 @@ paths:
     post:
       tags:
       - Teams
-      summary: Group teams
+      summary: Group and count teams
       responses:
         '200':
           description: Successful response.
@@ -12312,7 +12020,7 @@ paths:
     get:
       tags:
       - Shifts
-      summary: Get shifts record
+      summary: Get a shift
       responses:
         '200':
           description: Successful response.
@@ -12331,19 +12039,11 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
       description: Read-only resource. Generic mutations are not registered.
   /shift/query:
     post:
@@ -12402,16 +12102,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Shifts
-      summary: Count shifts
+      summary: Count shifts with a request body
       responses:
         '200':
           description: Successful response.
@@ -12440,7 +12136,7 @@ paths:
     post:
       tags:
       - Shifts
-      summary: Group shifts
+      summary: Group and count shifts
       responses:
         '200':
           description: Successful response.
@@ -12466,7 +12162,7 @@ paths:
     get:
       tags:
       - Departments (shops)
-      summary: List departments (shops)
+      summary: List departments
       responses:
         '200':
           description: Successful response.
@@ -12500,7 +12196,7 @@ paths:
     get:
       tags:
       - Departments (shops)
-      summary: Get departments (shops) record
+      summary: Get a department
       responses:
         '200':
           description: Successful response.
@@ -12519,25 +12215,17 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
       description: Read-only resource. Generic mutations are not registered.
   /shop/query:
     post:
       tags:
       - Departments (shops)
-      summary: Query departments (shops)
+      summary: Query departments
       responses:
         '200':
           description: Successful response.
@@ -12570,7 +12258,7 @@ paths:
     get:
       tags:
       - Departments (shops)
-      summary: Count departments (shops)
+      summary: Count departments
       responses:
         '200':
           description: Successful response.
@@ -12590,16 +12278,12 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
     post:
       tags:
       - Departments (shops)
-      summary: Count departments (shops)
+      summary: Count departments with a request body
       responses:
         '200':
           description: Successful response.
@@ -12628,7 +12312,7 @@ paths:
     post:
       tags:
       - Departments (shops)
-      summary: Group departments (shops)
+      summary: Group and count departments
       responses:
         '200':
           description: Successful response.
@@ -12688,7 +12372,7 @@ paths:
     post:
       tags:
       - Custom properties
-      summary: Create custom properties
+      summary: Create one or more custom properties
       responses:
         '201':
           description: Successful response.
@@ -12700,12 +12384,16 @@ paths:
                   properties:
                     value:
                       $ref: '#/components/schemas/CustomProperty'
+                  required:
+                  - value
                 - type: object
                   properties:
                     values:
                       type: array
                       items:
                         $ref: '#/components/schemas/CustomProperty'
+                  required:
+                  - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -12714,6 +12402,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       description: Requires customPropertiesEnabled. Disabled organizations receive 403. Organization property
         definitions and values on orders. See the resource guide for ownership and lifecycle constraints.
       requestBody:
@@ -12730,7 +12420,7 @@ paths:
     get:
       tags:
       - Custom properties
-      summary: Get custom properties record
+      summary: Get a custom property
       responses:
         '200':
           description: Successful response.
@@ -12749,24 +12439,16 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
+      - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/select'
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/filter'
       description: 'Requires customPropertiesEnabled. Disabled organizations receive 403. '
     patch:
       tags:
       - Custom properties
-      summary: Update custom properties
+      summary: Update a custom property
       responses:
         '200':
           description: Successful response.
@@ -12785,13 +12467,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
@@ -12802,7 +12483,7 @@ paths:
     put:
       tags:
       - Custom properties
-      summary: Upsert custom properties
+      summary: Upsert a custom property
       responses:
         '200':
           description: Successful response.
@@ -12821,19 +12502,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
-        description: Columns to update on conflict; repeat for multiple columns.
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -12844,21 +12519,26 @@ paths:
     delete:
       tags:
       - Custom properties
-      summary: Archive custom properties record
+      summary: Delete a custom property
       description: Requires customPropertiesEnabled. Disabled organizations receive 403. Archives the record;
         see the resource guide for restoration and constraints.
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
+      - $ref: '#/components/parameters/id'
       responses:
         '204':
           description: Completed; no response body.
         '403':
           $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /custom-property/query:
     post:
       tags:
@@ -12917,17 +12597,13 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: 'Requires customPropertiesEnabled. Disabled organizations receive 403. '
     post:
       tags:
       - Custom properties
-      summary: Count custom properties
+      summary: Count custom properties with a request body
       responses:
         '200':
           description: Successful response.
@@ -12957,7 +12633,7 @@ paths:
     post:
       tags:
       - Custom properties
-      summary: Group custom properties
+      summary: Group and count custom properties
       responses:
         '200':
           description: Successful response.
@@ -13005,11 +12681,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/orderBy'
-      - $ref: '#/components/parameters/select'
       - $ref: '#/components/parameters/search'
       - $ref: '#/components/parameters/filter'
       description: Requires customPropertiesEnabled. Disabled organizations receive 403. A filter is required.
@@ -13043,12 +12717,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: update
-        in: query
-        required: true
-        schema:
-          type: string
+      - $ref: '#/components/parameters/update'
       requestBody:
         required: true
         content:
@@ -13091,6 +12763,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: shopId
         in: query
@@ -13102,7 +12778,7 @@ paths:
     post:
       tags:
       - Inventory stock
-      summary: Remove empty stock rows
+      summary: Remove one empty stock row
       responses:
         '200':
           description: Successful response.
@@ -13120,6 +12796,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -13132,7 +12814,7 @@ paths:
     post:
       tags:
       - Inventory stock
-      summary: Remove empty stock rows
+      summary: Remove empty stock rows at a location
       responses:
         '200':
           description: Successful response.
@@ -13150,6 +12832,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       description: Requires item update permission. Only empty balances can be removed.
       requestBody:
         required: true
@@ -13167,7 +12853,7 @@ paths:
     post:
       tags:
       - BOM lines
-      summary: Prepare or reserve BOM materials
+      summary: Prepopulate an order BOM
       responses:
         '200':
           description: Successful response.
@@ -13183,6 +12869,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -13204,7 +12896,7 @@ paths:
     post:
       tags:
       - BOM lines
-      summary: Prepare or reserve BOM materials
+      summary: Allocate materials for an order
       responses:
         '200':
           description: Successful response.
@@ -13221,6 +12913,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -13244,7 +12942,7 @@ paths:
     post:
       tags:
       - BOM lines
-      summary: Prepare or reserve BOM materials
+      summary: Allocate materials for a project
       responses:
         '200':
           description: Successful response.
@@ -13261,6 +12959,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -13272,7 +12976,7 @@ paths:
     get:
       tags:
       - BOM lines
-      summary: Read material demand rollup
+      summary: Get demand across accessible projects
       responses:
         '200':
           description: Successful response.
@@ -13290,11 +12994,15 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /bom-line/project/{projectId}/materials-rollup:
     get:
       tags:
       - BOM lines
-      summary: Read material demand rollup
+      summary: Get the material rollup for a project
       responses:
         '200':
           description: Successful response.
@@ -13312,6 +13020,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: projectId
         in: path
@@ -13339,6 +13053,7 @@ paths:
                         allOf:
                         - $ref: '#/components/schemas/InventoryTransaction'
                         nullable: true
+                        type: object
                       producedAll:
                         type: array
                         items:
@@ -13361,6 +13076,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       description: Posts production without consuming inputs. Requires item update permission.
       requestBody:
         required: true
@@ -13429,6 +13148,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       description: Requires item update permission.
       requestBody:
         required: true
@@ -13482,6 +13205,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       requestBody:
         required: true
         content:
@@ -13532,6 +13259,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -13559,6 +13292,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -13586,6 +13325,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       description: Creates the paired group and token. itemIds are cargo deliverable IDs. Planned end must
         be after planned start.
       requestBody:
@@ -13692,6 +13435,14 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -13785,6 +13536,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -13843,6 +13600,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -13871,6 +13634,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -13899,14 +13668,18 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      description: Uses the delivery lifecycle command, including paired-group rules.
+      - $ref: '#/components/parameters/id'
+      description: Requires delivery delete permission. Archive is limited to received, delivered, or cancelled
+        deliveries; restore clears the archive state.
   /delivery/{id}/restore:
     post:
       tags:
@@ -13927,14 +13700,18 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '409':
+          $ref: '#/components/responses/Conflict'
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      description: Uses the delivery lifecycle command, including paired-group rules.
+      - $ref: '#/components/parameters/id'
+      description: Requires delivery delete permission. Archive is limited to received, delivered, or cancelled
+        deliveries; restore clears the archive state.
   /delivery/{id}/complete:
     post:
       tags:
@@ -13955,6 +13732,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -14004,6 +13787,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -14031,6 +13820,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -14061,6 +13856,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: page
         in: query
@@ -14082,9 +13881,9 @@ paths:
         in: query
         schema:
           type: string
-      description: Requires documentsHubEnabled. Generic document CRUD is available without that flag. Defaults
-        to 100 records, capped at 200. archived=true selects the archived view. Search matches title, number,
-        filename, and uploader.
+      description: Requires documentsHubEnabled. Generic reads, permanent DELETE, and archive-state PATCH are
+        available without that flag. Defaults to 100 records, capped at 200. archived=true selects the archived
+        view. Search matches title, number, filename, and uploader.
   /document/hub/bulk-upload:
     post:
       tags:
@@ -14101,13 +13900,31 @@ paths:
                   values:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Document'
+                      type: object
+                      required:
+                      - id
+                      - name
+                      - documentKey
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        documentKey:
+                          type: string
+                required:
+                - values
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
-      description: Requires documentsHubEnabled. Generic document CRUD is available without that flag. Register
-        existing storage keys, not multipart file content.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+      description: Requires documentsHubEnabled. Register existing storage keys, not multipart file content.
+        Repeated document keys are deduplicated.
       requestBody:
         required: true
         content:
@@ -14153,6 +13970,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -14160,7 +13983,8 @@ paths:
         schema:
           type: string
           format: uuid
-      description: Requires documentsHubEnabled. Generic document CRUD is available without that flag.
+      description: Requires documentsHubEnabled. Generic reads, permanent DELETE, and archive-state PATCH are
+        available without that flag.
   /document/{id}/versions:
     post:
       tags:
@@ -14180,6 +14004,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -14187,8 +14017,8 @@ paths:
         schema:
           type: string
           format: uuid
-      description: Requires documentsHubEnabled. Generic document CRUD is available without that flag. Requires
-        document update permission.
+      description: Requires documentsHubEnabled. Generic reads, permanent DELETE, and archive-state PATCH are
+        available without that flag. Requires document update permission.
       requestBody:
         required: true
         content:
@@ -14248,6 +14078,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -14261,7 +14097,8 @@ paths:
         schema:
           type: string
           format: uuid
-      description: Requires documentsHubEnabled. Generic document CRUD is available without that flag.
+      description: Requires documentsHubEnabled. Generic reads, permanent DELETE, and archive-state PATCH are
+        available without that flag.
   /document/{id}/versions/{versionId}/set-current:
     post:
       tags:
@@ -14289,6 +14126,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -14302,7 +14145,8 @@ paths:
         schema:
           type: string
           format: uuid
-      description: Requires documentsHubEnabled. Generic document CRUD is available without that flag.
+      description: Requires documentsHubEnabled. Generic reads, permanent DELETE, and archive-state PATCH are
+        available without that flag.
   /document/{id}/links:
     post:
       tags:
@@ -14322,6 +14166,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -14329,8 +14179,8 @@ paths:
         schema:
           type: string
           format: uuid
-      description: Requires documentsHubEnabled. Generic document CRUD is available without that flag. Requires
-        document read and target deliverable update permission.
+      description: Requires documentsHubEnabled and permission to read the document and update the target deliverable.
+        The current create route supports deliverable links only.
       requestBody:
         required: true
         content:
@@ -14356,6 +14206,18 @@ paths:
       responses:
         '204':
           description: Link removed; document retained.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: linkId
         in: path
@@ -14363,7 +14225,8 @@ paths:
         schema:
           type: string
           format: uuid
-      description: Requires documentsHubEnabled. Generic document CRUD is available without that flag.
+      description: Requires documentsHubEnabled. Generic reads, permanent DELETE, and archive-state PATCH are
+        available without that flag.
   /document/{id}/copy-mode:
     post:
       tags:
@@ -14384,6 +14247,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       parameters:
       - name: id
         in: path
@@ -14391,7 +14260,8 @@ paths:
         schema:
           type: string
           format: uuid
-      description: Requires documentsHubEnabled. Generic document CRUD is available without that flag.
+      description: Requires documentsHubEnabled. Generic reads, permanent DELETE, and archive-state PATCH are
+        available without that flag.
       requestBody:
         required: true
         content:
@@ -14434,6 +14304,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
       description: Available with or without Documents Hub. Counts only accessible deliverables.
       requestBody:
         required: true
@@ -14930,6 +14804,8 @@ components:
       properties:
         value:
           $ref: '#/components/schemas/Project'
+      required:
+      - value
     ProjectMultiResponse:
       type: object
       properties:
@@ -14937,6 +14813,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Project'
+      required:
+      - values
     ProjectListResponse:
       type: object
       properties:
@@ -15079,6 +14957,8 @@ components:
       properties:
         value:
           $ref: '#/components/schemas/Stage'
+      required:
+      - value
     StageMultiResponse:
       type: object
       properties:
@@ -15086,6 +14966,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Stage'
+      required:
+      - values
     StageListResponse:
       type: object
       properties:
@@ -15683,6 +15565,8 @@ components:
       properties:
         value:
           $ref: '#/components/schemas/Deliverable'
+      required:
+      - value
     DeliverableMultiResponse:
       type: object
       properties:
@@ -15690,6 +15574,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Deliverable'
+      required:
+      - values
     DeliverableListResponse:
       type: object
       properties:
@@ -16034,6 +15920,8 @@ components:
       properties:
         value:
           $ref: '#/components/schemas/DeliverableWorkSession'
+      required:
+      - value
     DeliverableWorkSessionMultiResponse:
       type: object
       properties:
@@ -16041,6 +15929,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeliverableWorkSession'
+      required:
+      - values
     DeliverableWorkSessionListResponse:
       type: object
       properties:
@@ -16205,6 +16095,8 @@ components:
       properties:
         value:
           $ref: '#/components/schemas/DeliverableDependency'
+      required:
+      - value
     DeliverableDependencyMultiResponse:
       type: object
       properties:
@@ -16212,6 +16104,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeliverableDependency'
+      required:
+      - values
     DeliverableDependencyListResponse:
       type: object
       properties:
@@ -16296,140 +16190,22 @@ components:
         metadata:
           type: object
           additionalProperties: true
-    DocumentCreate:
-      type: object
-      required:
-      - name
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique id. Generated on create unless you supply one.
-        orderId:
-          type: string
-          format: uuid
-          description: Optional legacy order/deliverable attachment. Hub documents can exist without an order.
-          nullable: true
-        name:
-          type: string
-          description: File name shown to readers.
-        appUserId:
-          type: string
-          format: uuid
-          description: Who uploaded the document.
-          nullable: true
-        documentUrl:
-          type: string
-          description: Time-limited download link, generated on read. Do not store it.
-          nullable: true
-        documentKey:
-          type: string
-          description: Storage key for the file.
-          nullable: true
-        deliverableDocument:
-          type: boolean
-          description: |-
-            `true` when the document is scoped to a specific deliverable rather than the whole order.
-        copyWithDeliverable:
-          type: boolean
-          description: '`true` to copy the document along when its deliverable is copied.'
-        lastModifiedAt:
-          type: string
-          format: date-time
-          description: When the underlying file last changed.
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-          description: When the record was created.
-        updatedAt:
-          type: string
-          format: date-time
-          description: When the record last changed.
-        title:
-          type: string
-          nullable: true
-        documentNumber:
-          type: string
-          nullable: true
-        currentVersionId:
-          type: string
-          format: uuid
-          nullable: true
-        copyMode:
-          type: string
-          enum:
-          - none
-          - copy
-          - reference
-        isArchived:
-          type: boolean
-        metadata:
-          type: object
-          additionalProperties: true
     DocumentUpdate:
       type: object
-      description: Every field is optional. Only the fields you send are changed.
+      description: The only generic document update is an archive-state change.
       properties:
-        orderId:
-          type: string
-          format: uuid
-          description: Optional legacy order/deliverable attachment. Hub documents can exist without an order.
-          nullable: true
-        name:
-          type: string
-          description: File name shown to readers.
-        appUserId:
-          type: string
-          format: uuid
-          description: Who uploaded the document.
-          nullable: true
-        documentUrl:
-          type: string
-          description: Time-limited download link, generated on read. Do not store it.
-          nullable: true
-        documentKey:
-          type: string
-          description: Storage key for the file.
-          nullable: true
-        deliverableDocument:
-          type: boolean
-          description: |-
-            `true` when the document is scoped to a specific deliverable rather than the whole order.
-        copyWithDeliverable:
-          type: boolean
-          description: '`true` to copy the document along when its deliverable is copied.'
-        lastModifiedAt:
-          type: string
-          format: date-time
-          description: When the underlying file last changed.
-          nullable: true
-        title:
-          type: string
-          nullable: true
-        documentNumber:
-          type: string
-          nullable: true
-        currentVersionId:
-          type: string
-          format: uuid
-          nullable: true
-        copyMode:
-          type: string
-          enum:
-          - none
-          - copy
-          - reference
         isArchived:
           type: boolean
-        metadata:
-          type: object
-          additionalProperties: true
+          description: Set true to archive the document or false to restore it.
+      required:
+      - isArchived
     DocumentSingleResponse:
       type: object
       properties:
         value:
           $ref: '#/components/schemas/Document'
+      required:
+      - value
     DocumentMultiResponse:
       type: object
       properties:
@@ -16437,6 +16213,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Document'
+      required:
+      - values
     DocumentListResponse:
       type: object
       properties:
@@ -16705,6 +16483,8 @@ components:
       properties:
         value:
           $ref: '#/components/schemas/QCInspectionSet'
+      required:
+      - value
     QCInspectionSetMultiResponse:
       type: object
       properties:
@@ -16712,6 +16492,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/QCInspectionSet'
+      required:
+      - values
     QCInspectionSetListResponse:
       type: object
       properties:
@@ -16830,6 +16612,8 @@ components:
       properties:
         value:
           $ref: '#/components/schemas/QCTemplateVersion'
+      required:
+      - value
     QCTemplateVersionMultiResponse:
       type: object
       properties:
@@ -16837,6 +16621,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/QCTemplateVersion'
+      required:
+      - values
     QCTemplateVersionListResponse:
       type: object
       properties:
@@ -17021,6 +16807,8 @@ components:
       properties:
         value:
           $ref: '#/components/schemas/Worker'
+      required:
+      - value
     WorkerMultiResponse:
       type: object
       properties:
@@ -17028,6 +16816,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Worker'
+      required:
+      - values
     WorkerListResponse:
       type: object
       properties:
@@ -17202,6 +16992,8 @@ components:
       properties:
         value:
           $ref: '#/components/schemas/Timesheet'
+      required:
+      - value
     TimesheetMultiResponse:
       type: object
       properties:
@@ -17209,6 +17001,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Timesheet'
+      required:
+      - values
     TimesheetListResponse:
       type: object
       properties:
@@ -17305,6 +17099,8 @@ components:
       properties:
         value:
           $ref: '#/components/schemas/Code'
+      required:
+      - value
     CodeMultiResponse:
       type: object
       properties:
@@ -17312,6 +17108,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Code'
+      required:
+      - values
     CodeListResponse:
       type: object
       properties:
@@ -17530,6 +17328,8 @@ components:
       properties:
         value:
           $ref: '#/components/schemas/Role'
+      required:
+      - value
     RoleMultiResponse:
       type: object
       properties:
@@ -17537,6 +17337,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Role'
+      required:
+      - values
     RoleListResponse:
       type: object
       properties:
@@ -17682,6 +17484,8 @@ components:
       properties:
         value:
           $ref: '#/components/schemas/OrganizationMember'
+      required:
+      - value
     OrganizationMemberMultiResponse:
       type: object
       properties:
@@ -17689,6 +17493,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OrganizationMember'
+      required:
+      - values
     OrganizationMemberListResponse:
       type: object
       properties:
@@ -18590,82 +18396,6 @@ components:
         metadata:
           type: object
           additionalProperties: true
-    InventoryTransactionCreate:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Optional client-supplied ID.
-        itemId:
-          type: string
-          format: uuid
-        shopId:
-          type: string
-          format: uuid
-          description: Derived from the posting location; a supplied shopId does not override it.
-        type:
-          type: string
-          enum:
-          - receipt
-          - consume
-          - transfer
-          - adjust
-          - produce
-          - ship
-          - return
-        quantity:
-          type: number
-          description: Base-unit quantity. Adjust is a signed delta; transfer and return use nonnegative magnitudes.
-        unitMeasureId:
-          type: string
-          format: uuid
-          nullable: true
-        unitCost:
-          type: number
-          nullable: true
-        fromLocationId:
-          type: string
-          format: uuid
-          nullable: true
-        toLocationId:
-          type: string
-          format: uuid
-          nullable: true
-        deliverableId:
-          type: string
-          format: uuid
-          nullable: true
-        deliveryId:
-          type: string
-          format: uuid
-          nullable: true
-        pickLineId:
-          type: string
-          format: uuid
-          nullable: true
-        source:
-          type: string
-          enum:
-          - manual
-          - import
-          - scan
-          - count
-          - integration
-        reason:
-          type: string
-          nullable: true
-        appUserId:
-          type: string
-          format: uuid
-          nullable: true
-        metadata:
-          type: object
-          additionalProperties: true
-      required:
-      - itemId
-      - type
-      - quantity
     InventoryAllocation:
       type: object
       properties:
@@ -19762,6 +19492,9 @@ components:
         carrierKind:
           type: string
           nullable: true
+          enum:
+          - own
+          - third_party
         receiverContactId:
           type: string
           format: uuid
@@ -19773,10 +19506,12 @@ components:
         publicToken:
           type: string
           nullable: true
+          readOnly: true
         deliverableGroupId:
           type: string
           format: uuid
           nullable: true
+          readOnly: true
         confirmationTemplateId:
           type: string
           format: uuid
@@ -19794,8 +19529,6 @@ components:
           type: string
           format: uuid
           description: Optional client-supplied ID.
-        isArchived:
-          type: boolean
         name:
           type: string
         identifier:
@@ -19804,15 +19537,12 @@ components:
           type: string
           enum:
           - inbound
+          description: Generic creation accepts inbound deliveries only.
         status:
           type: string
           enum:
           - expected
-          - scheduled
-          - in_transit
-          - received
-          - delivered
-          - cancelled
+          description: Generic creation accepts the initial expected status only.
         fromKind:
           type: string
           nullable: true
@@ -19875,13 +19605,6 @@ components:
           format: uuid
           nullable: true
         driverContactId:
-          type: string
-          format: uuid
-          nullable: true
-        publicToken:
-          type: string
-          nullable: true
-        deliverableGroupId:
           type: string
           format: uuid
           nullable: true
@@ -19901,19 +19624,6 @@ components:
           type: string
         identifier:
           type: string
-        direction:
-          type: string
-          enum:
-          - inbound
-        status:
-          type: string
-          enum:
-          - expected
-          - scheduled
-          - in_transit
-          - received
-          - delivered
-          - cancelled
         fromKind:
           type: string
           nullable: true
@@ -19976,13 +19686,6 @@ components:
           format: uuid
           nullable: true
         driverContactId:
-          type: string
-          format: uuid
-          nullable: true
-        publicToken:
-          type: string
-          nullable: true
-        deliverableGroupId:
           type: string
           format: uuid
           nullable: true
@@ -20865,272 +20568,6 @@ components:
         allowsAdHocOptions:
           type: boolean
           description: Select types only. Append unknown options on value writes when true.
-    ItemSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Item'
-    ItemListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Item'
-        hasMore:
-          type: boolean
-    ItemVendorSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/ItemVendor'
-    ItemVendorListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/ItemVendor'
-        hasMore:
-          type: boolean
-    InventoryStockSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/InventoryStock'
-    InventoryStockListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/InventoryStock'
-        hasMore:
-          type: boolean
-    InventoryTransactionSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/InventoryTransaction'
-    InventoryTransactionListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/InventoryTransaction'
-        hasMore:
-          type: boolean
-    InventoryAllocationSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/InventoryAllocation'
-    InventoryAllocationListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/InventoryAllocation'
-        hasMore:
-          type: boolean
-    BomLineSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/BomLine'
-    BomLineListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/BomLine'
-        hasMore:
-          type: boolean
-    ProductionOutputSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/ProductionOutput'
-    ProductionOutputListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProductionOutput'
-        hasMore:
-          type: boolean
-    UnitMeasureSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/UnitMeasure'
-    UnitMeasureListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/UnitMeasure'
-        hasMore:
-          type: boolean
-    VendorSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Vendor'
-    VendorListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Vendor'
-        hasMore:
-          type: boolean
-    LocationSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Location'
-    LocationListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Location'
-        hasMore:
-          type: boolean
-    DeliverySingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Delivery'
-    DeliveryListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Delivery'
-        hasMore:
-          type: boolean
-    DeliveryLineSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/DeliveryLine'
-    DeliveryLineListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/DeliveryLine'
-        hasMore:
-          type: boolean
-    TruckSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Truck'
-    TruckListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Truck'
-        hasMore:
-          type: boolean
-    ContactSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Contact'
-    ContactListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Contact'
-        hasMore:
-          type: boolean
-    ProjectContactSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/ProjectContact'
-    ProjectContactListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProjectContact'
-        hasMore:
-          type: boolean
-    TeamSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Team'
-    TeamListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Team'
-        hasMore:
-          type: boolean
-    ShiftSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Shift'
-    ShiftListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Shift'
-        hasMore:
-          type: boolean
-    ShopSingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/Shop'
-    ShopListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/Shop'
-        hasMore:
-          type: boolean
-    CustomPropertySingleResponse:
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/CustomProperty'
-    CustomPropertyListResponse:
-      type: object
-      properties:
-        values:
-          type: array
-          items:
-            $ref: '#/components/schemas/CustomProperty'
-        hasMore:
-          type: boolean
     DocumentVersion:
       type: object
       properties:

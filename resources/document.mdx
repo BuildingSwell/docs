@@ -5,7 +5,9 @@ description: "Files, shared references, and version history."
 
 A document can be attached to an order or deliverable, or exist independently in Documents Hub. Hub links let several deliverables reference the same document and version history.
 
-Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
+The generic endpoint supports reads, permanent DELETE, and archive/restore through
+`PATCH { "isArchived": true | false }`. Direct POST and PUT requests return
+`405`; create documents through Documents Hub or the deliverable tab.
 
 ## Fields
 
@@ -49,26 +51,16 @@ The legacy fields are:
 generated when you read the record, so it expires: store `documentKey` and re-read the
 document when you need a fresh link.
 
-## What you can write
+## Generic writes
 
-Everything else in the table above is set by BuildingSwell.
+`PATCH /document/{id}` and `PATCH /document/bulk?<filter>` accept exactly one
+field: `isArchived`. Any other field returns `400`. `POST /document`,
+`PUT /document/{id}`, and `PUT /document/bulk` return `405`, because those paths
+would bypass version and link bookkeeping.
 
-| Field | On create | On update |
-| ----- | --------- | --------- |
-| `orderId` | Optional | Yes |
-| `name` | Required | Yes |
-| `title` | Optional | Yes |
-| `documentNumber` | Optional | Yes |
-| `currentVersionId` | Optional | Yes |
-| `copyMode` | Optional | Yes |
-| `isArchived` | Optional | Yes |
-| `metadata` | Optional | Yes |
-| `appUserId` | Optional | Yes |
-| `documentUrl` | Optional | Yes |
-| `documentKey` | Optional | Yes |
-| `deliverableDocument` | Optional | Yes |
-| `copyWithDeliverable` | Optional | Yes |
-| `lastModifiedAt` | Optional | Yes |
+Use `POST /document/hub/bulk-upload` to create Hub documents, the version actions
+to change file metadata, link actions to attach documents, and the copy-mode
+action to change propagation behavior.
 
 ## Deleting
 
@@ -82,13 +74,21 @@ See [archiving and deleting](/guides/archiving-and-deleting) for the full pictur
 
 ## Documents Hub and versions
 
-Hub endpoints require your organization's `documentsHubEnabled` flag; generic document CRUD remains available without it. Version writes require document update permission. Attaching a link requires document read and target deliverable update permission.
+Hub endpoints require your organization's `documentsHubEnabled` flag. Without it,
+generic reads, permanent DELETE, and archive/restore remain available. Version
+writes require document update permission. Attaching a link requires document
+read and target deliverable update permission.
+
+Generic list and by-id reads default to `deliverableDocument=true`. Hub-only
+documents are therefore omitted from `GET /document` and can return `404` from
+`GET /document/{id}`. Use the Hub endpoints for Hub documents, or pass an
+explicit `deliverableDocument` filter on the generic list endpoint.
 
 | Endpoint | Request and response |
 | --- | --- |
 | `GET /document/hub` | `{ values, hasMore }`; page size defaults to 100 and is capped at 200. Use `archived=true` for the archived view. Search matches title, number, filename, or uploader. |
 | `GET /document/{id}/hub-detail` | `{ value }` with the document, versions, links, and provenance. |
-| `POST /document/hub/bulk-upload` | Array of 1–20 `{ name, documentKey, lastModifiedAt?, folderName? }` objects. Registers files already in storage; returns `201 { values }`. |
+| `POST /document/hub/bulk-upload` | Array of 1–20 `{ name, documentKey, lastModifiedAt?, folderName? }` objects. Registers files already in storage and deduplicates existing keys; returns `201 { values }`, with `{ id, name, documentKey }` per item. |
 | `POST /document/{id}/versions` | `{ name, documentKey?, documentUrl?, versionLabel?, mimeType?, lastModifiedAt? }`; returns `201 { value }` with the version. |
 | `POST /document/{id}/versions/{versionId}/archive` | No body; returns `{ value: { id, isArchived, currentVersionId } }`. |
 | `POST /document/{id}/versions/{versionId}/set-current` | No body; returns `{ value: { id, currentVersionId } }`. |

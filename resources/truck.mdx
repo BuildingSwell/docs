@@ -32,7 +32,11 @@ The [standard endpoints](/guides/standard-endpoints) provide reads and writes, s
 | `notes` | string \| null | Optional on create; see constraints below. |
 | `metadata` | object | Optional on create; see constraints below. |
 
-Only `name` is required. Weight fields are pounds; deck dimensions and maximum height are feet. Capacity values must be positive when supplied. Link a delivery with `truckId`; `truck` on the delivery is its legacy free-text label. DELETE archives the truck.
+Only `name` is required. Weight fields are pounds; deck dimensions and maximum
+height are feet. Capacity values must be positive when supplied. On a delivery,
+use either `truckId` for a saved truck or `truck` for a one-time free-text truck.
+They are mutually exclusive; setting one clears the other. DELETE archives the
+saved truck.
 
 ## Archive and restore
 

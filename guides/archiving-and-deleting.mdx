@@ -44,7 +44,10 @@ Archive behavior varies by resource:
 - `archivedAt` is stamped with the current time, and cleared again on restore, for
   the resources that carry the field. Each resource page lists its own fields:
   People and Stages both carry `isArchived` and `archivedAt`.
-- Archived records drop out of reads, including reads by id.
+- Models with an archive-aware default filter hide archived records from reads,
+  including reads by id. Plain link/reporting models can expose an
+  `isArchived` field without applying that default; their resource pages call
+  this out.
 
 That last point catches people out. Filters default to `isArchived eq false`, so
 ask for archived records explicitly when you want them:
@@ -53,9 +56,11 @@ ask for archived records explicitly when you want them:
 GET /project?isArchived=true
 ```
 
-This holds for every archivable resource, People included. Your `isArchived`
-replaces the default rather than narrowing it, and repeating the parameter
-matches either value, so one request can return both:
+This holds for archive-aware resources, People included. It does not hold for
+item-vendor relationships or inventory allocations: those plain models still
+return archived rows unless you filter them. On archive-aware resources, your
+`isArchived` replaces the default rather than narrowing it, and repeating the
+parameter matches either value, so one request can return both:
 
 ```http
 GET /project?isArchived=true&isArchived=false

@@ -98,6 +98,7 @@
           },
           {
             "group": "Materials and inventory",
+            "icon": "boxes-stacked",
             "pages": [
               "resources/item",
               "resources/item-vendor",
@@ -113,6 +114,7 @@
           },
           {
             "group": "Delivery",
+            "icon": "truck",
             "pages": [
               "resources/delivery",
               "resources/delivery-line",
@@ -123,6 +125,7 @@
           },
           {
             "group": "Organization lists",
+            "icon": "building",
             "pages": [
               "resources/team",
               "resources/shift",
@@ -269,17 +272,14 @@
             "openapi": "openapi.yaml",
             "pages": [
               "GET /document",
-              "POST /document",
               "GET /document/{id}",
               "PATCH /document/{id}",
-              "PUT /document/{id}",
               "DELETE /document/{id}",
               "GET /document/count",
               "POST /document/count",
               "POST /document/query",
               "POST /document/group-and-count",
               "PATCH /document/bulk",
-              "PUT /document/bulk",
               "DELETE /document/bulk",
               "GET /document/hub",
               "POST /document/hub/bulk-upload",
@@ -291,6 +291,24 @@
               "DELETE /document/links/{linkId}",
               "POST /document/{id}/copy-mode",
               "POST /document/counts-by-deliverable"
+            ]
+          },
+          {
+            "group": "Custom properties",
+            "openapi": "openapi.yaml",
+            "pages": [
+              "GET /custom-property",
+              "POST /custom-property",
+              "GET /custom-property/{id}",
+              "PATCH /custom-property/{id}",
+              "PUT /custom-property/{id}",
+              "DELETE /custom-property/{id}",
+              "POST /custom-property/query",
+              "GET /custom-property/count",
+              "POST /custom-property/count",
+              "POST /custom-property/group-and-count",
+              "PATCH /custom-property/bulk",
+              "PUT /custom-property/bulk"
             ]
           },
           {
@@ -763,24 +781,6 @@
               "GET /shop/count",
               "POST /shop/count",
               "POST /shop/group-and-count"
-            ]
-          },
-          {
-            "group": "Custom properties",
-            "openapi": "openapi.yaml",
-            "pages": [
-              "GET /custom-property",
-              "POST /custom-property",
-              "GET /custom-property/{id}",
-              "PATCH /custom-property/{id}",
-              "PUT /custom-property/{id}",
-              "DELETE /custom-property/{id}",
-              "POST /custom-property/query",
-              "GET /custom-property/count",
-              "POST /custom-property/count",
-              "POST /custom-property/group-and-count",
-              "PATCH /custom-property/bulk",
-              "PUT /custom-property/bulk"
             ]
           }
         ]

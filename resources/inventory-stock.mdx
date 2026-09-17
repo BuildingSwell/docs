@@ -23,4 +23,10 @@ The standard list, single-record read, query, count, and group-and-count endpoin
 
 This is a derived balance. Generic create, update, upsert, and delete routes are not registered. Use [inventory transactions](/resources/inventory-transaction), [receiving](/resources/delivery), or [production](/resources/production-output).
 
-For housekeeping, `POST /inventory-stock/{id}/remove` removes an empty balance row; `POST /inventory-stock/remove-empty` takes `{ "locationId": "<uuid>" }` to remove empty rows at a location. Both return `{ "value": { "removed": ... } }`. These actions require item update permission and do not dispose of nonzero stock.
+For housekeeping, `POST /inventory-stock/{id}/remove` removes one empty balance
+row. It returns `404` when the row is missing and `400` when it is nonzero.
+`POST /inventory-stock/remove-empty` takes `{ "locationId": "<uuid>" }` and
+removes empty rows directly at that location. Both return
+`{ "value": { "removed": ... } }`, require item update permission, and clear an
+item's `defaultLocationId` when the removed row was its default. They never
+dispose of nonzero stock.

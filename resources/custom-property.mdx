@@ -79,31 +79,28 @@ Unknown property keys, invalid values, and nonempty values on unsupported delive
 - Send `{ "data": { "properties": { "squareFeet": null } } }` to remove one value. An empty string or empty array also clears that key.
 - Send `{ "data": { "properties": {} } }` or `properties: null` to clear **all** values. An empty object is not a no-op.
 
-## Filter, select, and aggregate
+## Filter, select, and count
 
 ```http
-GET /deliverable?type=order&data.properties.squareFeet:gt=100
+GET /deliverable?type=order&data.properties.squareFeet=245.5
 GET /deliverable?type=order&select=id,name,data.properties.squareFeet
 ```
 
-For totals by project, use a grouped query with numeric aggregates:
+The dotted `select` field is returned as the flattened key
+`dataPropertiesSquareFeet`, rather than as a nested `data.properties` object.
 
-```http
-POST /deliverable/query
-Content-Type: application/json
+<Warning>
+  Range filters on custom-property paths are currently textual. For example,
+  `data.properties.squareFeet:gt=100` can treat `95` as greater than `100`.
+  Do not use `:gt`, `:ge`, `:lt`, or `:le` for numeric custom-property
+  reporting. Fetch the values and compare them numerically in your integration.
+</Warning>
 
-{
-  "type": "order",
-  "groupBy": "data.projectId",
-  "select": [
-    "data.projectId",
-    { "aggregate": "SUM", "field": "data.properties.squareFeet", "alias": "totalSquareFeet" },
-    { "aggregate": "AVG", "field": "data.properties.squareFeet", "alias": "averageSquareFeet" }
-  ]
-}
-```
-
-Use `POST /deliverable/group-and-count` with `groupByField: "data.properties.squareFeet"` when you want counts by value. See [grouping and aggregates](/guides/group-and-count).
+Use `POST /deliverable/group-and-count` with
+`groupByField: "data.properties.squareFeet"` when you want counts by exact
+stored value. SUM and AVG across deliverables are not exposed by this API;
+`POST /deliverable/query` rejects grouped reads. See
+[grouping and counting](/guides/group-and-count).
 
 ## Archive and restore
 

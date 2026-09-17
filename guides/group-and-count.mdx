@@ -109,6 +109,10 @@ A grouped query must select only grouped fields or aggregate expressions:
 
 - `groupBy` does not combine with a `join` that selects fields — those come back
   as un-grouped expressions. Group on the resource's own fields instead.
-- Computed fields that you select must also satisfy grouping rules. Deliverable grouped queries can select stored nested paths and aggregates without automatically adding unrelated computed fields. See [custom-property totals](/resources/custom-property#filter-select-and-aggregate).
+- Models that always project computed or joined fields cannot use `groupBy`.
+  `deliverable` is one of them, so a grouped deliverable read returns `400`.
+  Use `POST /deliverable/group-and-count` for raw fields or
+  [`POST /deliverable/groups`](/resources/deliverable#group-by-a-domain-dimension)
+  for its domain dimensions.
 
 Each of these is a `400` that names the field or resource at fault.

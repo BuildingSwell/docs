@@ -40,7 +40,11 @@ The [standard endpoints](/guides/standard-endpoints) provide reads and writes, s
 
 ## Ownership and quantities
 
-Supply `itemId` and exactly one of `routeDeliverableId`, `orderDeliverableId`, or `projectId`. A route needs a positive `outputPerUnit` or `quantity`; orders and projects need a positive `quantity`. The name and unit default from the item.
+Supply `itemId` and exactly one of `routeDeliverableId`, `orderDeliverableId`, or
+`projectId`. A route or order owner must be the root deliverable itself; use
+placements to target a phase, stage, or step. A route needs a positive
+`outputPerUnit` or `quantity`; orders and projects need a positive `quantity`.
+The name and unit default from the item.
 
 `mode` identifies the quantity column: `ratio` uses `outputPerUnit`, and `total` uses `quantity`. `scaling` controls whether that figure is `per_unit` or `per_order`. Route lines default to per-unit ratios; order/project lines default to per-order totals. `ratio` with `per_order` is invalid, and project lines must use `per_order`.
 
@@ -48,7 +52,7 @@ Supply `itemId` and exactly one of `routeDeliverableId`, `orderDeliverableId`, o
 
 | Endpoint | Request |
 | --- | --- |
-| `POST /bom-line/order/{id}/prepopulate` | `{}` or `{ "routeDeliverableId": "<uuid>" }`; seeds the order BOM. |
+| `POST /bom-line/order/{id}/prepopulate` | `{}` seeds from the project BOM when one exists. Pass `{ "routeDeliverableId": "<uuid>" }` to fall back to route inputs and copy route output declarations. Re-runs are idempotent. |
 | `POST /bom-line/order/{id}/allocate` | `{}` or `{ "itemIds": ["<uuid>"] }`; reserves order materials. |
 | `POST /bom-line/project/{id}/allocate` | No body; reserves project materials. |
 | `GET /bom-line/demand-rollup` | Organization material demand and source breakdown. |
