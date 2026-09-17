@@ -34,15 +34,14 @@ GET /project?orderBy=name:asc
 GET /project?orderBy[]=name:asc&orderBy[]=createdAt:desc
 ```
 
-Repeat `orderBy[]` to sort by more than one field, in the order you list them.
+Use comma-separated values (`orderBy=name:asc,createdAt:desc`) or repeated `orderBy` parameters to sort by multiple fields, in order. The bracket-array form above also works.
 
 ## Returning only some fields
 
-Repeat the `select` parameter once per field. A single comma-separated value is
-**rejected** with `400` and `Invalid select field: 'id,name'`, so do not reach for
-the shorthand:
+Use comma-separated values or repeat `select` once per field. These forms are equivalent:
 
 ```http
+GET /project?select=id,name,identifier
 GET /project?select=id&select=name&select=identifier
 ```
 
@@ -51,6 +50,8 @@ In a `POST /{resource}/query` body, pass an array instead:
 ```json
 { "select": ["id", "name", "identifier"] }
 ```
+
+An explicit `select` restricts the resource fields returned, including computed fields on deliverables. You can request computed fields by name. Omit `select` to read the full record. Nested paths such as `data.properties.squareFeet` work too.
 
 ## Full-text search
 
@@ -90,16 +91,14 @@ GET /deliverable?createdAt:gt=2026-01-01
 | `:le` | Less than or equal to |
 | `:isn` | Is null |
 | `:isnn` | Is not null |
+| `:in` | Matches any value in a comma-separated or repeated list |
 
-<Warning>
-  **There is no `:in` operator.** A filter like `progress.status:in=wip,rework` is
-  accepted by the parser and then fails at the database with a `500`. To match
-  several values, repeat the plain field parameter instead:
+```http
+GET /deliverable?progress.status:in=wip,rework
+GET /deliverable?progress.status:in=wip&progress.status:in=rework
+```
 
-  ```http
-  GET /deliverable?progress.status=wip&progress.status=rework
-  ```
-</Warning>
+Both forms match either value. Use repeated parameters when a value itself contains a comma; repeated values are preserved verbatim. An empty `:in` list is rejected with `400`.
 
 For anything with AND or OR in it, use `filter`:
 

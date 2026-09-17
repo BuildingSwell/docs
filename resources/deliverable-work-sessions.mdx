@@ -11,6 +11,14 @@ Standard CRUD applies. See [standard endpoints](/guides/standard-endpoints).
 For a single read across both work sessions and attendance, use
 [timesheets](/resources/timesheet) instead.
 
+## Processed and original clock times
+
+`startDate` and `endDate` are the effective times used by BuildingSwell reporting. The hours-rounding job can rewrite these boundaries after a session closes. Do not assume they are the original clock times or that a closed record will never change.
+
+`rawStart` and `rawEnd` preserve the original boundary when that side is processed. They are independent: one can be populated while the other is null. A non-null raw value means that boundary was processed, even if its value equals the effective time. There is no separate rounded flag.
+
+For original clock times, use `rawStart ?? startDate` and `rawEnd ?? endDate`. For processed hours, use `startDate` and `endDate`, accounting for unpaid breaks. Raw fields are read-only; editing time can reset the processing state. Reconcile previously fetched closed records when importing hours.
+
 ## Fields
 
 Every property the API returns for a work session.
@@ -22,8 +30,10 @@ Every property the API returns for a work session.
 | `deliverableId` | UUID | Deliverable the time was logged against. **Required on create.** |
 | `workerId` | UUID | Person who did the work. **Required on create.** |
 | `shopId` | UUID | Department the session belongs to. **Required on create.** |
-| `startDate` | date-time | When the session started, in UTC. **Required on create.** |
-| `endDate` | date-time \| null | When the session ended, in UTC. `null` means it is still open. |
+| `startDate` | date-time | Effective start in UTC; may be rounded. **Required on create.** |
+| `endDate` | date-time \| null | Effective end in UTC; may be rounded. `null` means it is still open. |
+| `rawStart` | date-time \| null | Original start preserved when that boundary is processed. Read-only. |
+| `rawEnd` | date-time \| null | Original end preserved when that boundary is processed. Read-only. |
 | `isEdited` | boolean | `true` when someone has edited the session by hand. Defaults to `false`. |
 | `lastUpdatedBy` | UUID \| null | Who last changed the session. |
 | `shiftWorkHours` | object \| null | The shift the record was worked against. Break times are local wall-clock, not UTC. |

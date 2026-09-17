@@ -1,0 +1,43 @@
+---
+title: "Delivery lines"
+description: "Material and ad-hoc manifest lines."
+---
+
+Base path: `/delivery-line` (relative to your instance’s `/api/v2`).
+
+The [standard endpoints](/guides/standard-endpoints) provide reads and writes, subject to the constraints below.
+
+**Search columns:** `rawDescription`, `notes`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Optional on create; see constraints below. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `isArchived` | boolean | Optional on create; see constraints below. |
+| `archivedAt` | date-time \| null | Read-only. |
+| `deliveryId` | uuid | Required on create. |
+| `itemId` | uuid \| null | Optional on create; see constraints below. |
+| `deliverableId` | uuid \| null | Optional on create; see constraints below. |
+| `quantityExpected` | number | Optional on create; see constraints below. |
+| `quantityActual` | number \| null | Optional on create; see constraints below. |
+| `unitMeasureId` | uuid \| null | Optional on create; see constraints below. |
+| `unitCost` | number \| null | Optional on create; see constraints below. |
+| `locationId` | uuid \| null | Optional on create; see constraints below. |
+| `loadStopId` | uuid \| null | Optional on create; see constraints below. |
+| `unloadStopId` | uuid \| null | Optional on create; see constraints below. |
+| `loadedAt` | date-time \| null | Optional on create; see constraints below. |
+| `unloadedAt` | date-time \| null | Optional on create; see constraints below. |
+| `rawDescription` | string \| null | Optional on create; see constraints below. |
+| `notes` | string \| null | Optional on create; see constraints below. |
+
+Supply `deliveryId` and at least one of `itemId` or a nonempty `rawDescription`. Quantities must be nonnegative; zero expected quantity is valid for an outbound extra. `loadStopId` and `unloadStopId` place a line on the itinerary; null means the whole trip.
+
+`loadedAt` and `unloadedAt` are checklist timestamps; `quantityActual` is the delivered/received quantity. Receiving and completion actions update quantities and stock. A terminal or cancelled delivery locks its manifest against further writes. DELETE archives a line; it does not reverse posted stock.
+
+## Archive and restore
+
+DELETE archives this resource. Restore it with `PATCH /delivery-line/{id}` and `{ "isArchived": false }`. See [archiving and deleting](/guides/archiving-and-deleting).

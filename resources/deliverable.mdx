@@ -34,7 +34,7 @@ Every property the API returns for a deliverable.
 | `isArchived` | boolean | Archived records are hidden from list results unless you ask for them. Set this to archive or restore the record. Defaults to `false`. |
 | `archivedAt` | date-time \| null | When the record was archived. Set automatically when `isArchived` flips to `true`, and cleared on restore. Server-managed. |
 | `archivedById` | UUID \| null | Who archived the record. Server-managed: a value you send is ignored. |
-| `type` | enum | Which concept this node represents. One of `order` \| `route` \| `overhead` \| `template-phase` \| `phase` \| `component` \| `stage` \| `step` \| `qcstep`. **Required on create.** |
+| `type` | enum | Which concept this node represents. One of `order` \| `route` \| `overhead` \| `template-phase` \| `phase` \| `component` \| `stage` \| `step` \| `qcstep` \| `group`. **Required on create.** |
 | `quantity` | integer | How many of this node the work covers. Defaults to `1`. |
 | `parentId` | UUID \| null | Node directly above this one. |
 | `rootParentId` | UUID \| null | Root of this node's tree. A root node points at itself. |
@@ -54,10 +54,11 @@ Every property the API returns for a deliverable.
 
 ### `type` values
 
-Nine concepts share this one model.
+Ten concepts share this one model.
 
 | Value | Role | Description |
 | ----- | ---- | ----------- |
+| `group` | grouping node | Groups cargo/work by `data.itemIds` without changing each member’s parent. Delivery trips can own a paired group. |
 | `order` | root | Production ticket for a project. The only type that carries `schedule` and `progress`. |
 | `route` | root | Reusable process blueprint, applied onto orders, phases, and components. |
 | `overhead` | root | Indirect-labour bucket. A leaf, with time tracked through work sessions. |
@@ -67,6 +68,10 @@ Nine concepts share this one model.
 | `stage` | work node | A department work station. Must link a [stage](/resources/stage) through `data.stageId`. |
 | `step` | leaf | A unit of work. Must sit under a `stage`. |
 | `qcstep` | leaf | A QC gate. Must sit under a `stage`, and needs `data.qcTemplateId`. |
+
+### Custom property values
+
+Orders store catalog-defined values at `data.properties.<key>`. Nonempty property maps merge by key; `{}` or `null` clears all values. The rollout flag, value types, and query examples are covered in [custom properties](/resources/custom-property).
 
 ### `schedule`
 
@@ -103,7 +108,8 @@ All read-only. BuildingSwell derives these from the tree on every read, so anyth
 
 | Field | Type | Notes |
 | ----- | ---- | ----- |
-| `rootType` | enum \| null | `type` of the root node of this tree. One of `order` \| `route` \| `overhead` \| `template-phase` \| `phase` \| `component` \| `stage` \| `step` \| `qcstep`. |
+| `groupIds` | UUID[] | IDs of group deliverables containing this node. Read-only reverse membership derived from group `data.itemIds`. |
+| `rootType` | enum \| null | `type` of the root node of this tree. One of `order` \| `route` \| `overhead` \| `template-phase` \| `phase` \| `component` \| `stage` \| `step` \| `qcstep` \| `group`. |
 | `fullName` | string[] | Name breadcrumb from the root down to this node. |
 | `fullPath` | UUID[] | Id breadcrumb from the root down to this node. |
 | `shopId` | UUID \| null | Department that applies to this node, inherited from the nearest ancestor when the node does not set one. `null` means cross-department. |
@@ -155,7 +161,7 @@ POST /deliverable/groups
 { "groupBy": "project" }
 ```
 
-`groupBy` takes `project`, `stage`, `people`, `root`, or `tags`. Use this when you
+`groupBy` takes `project`, `phase`, `stage`, `people`, `root`, or `tags`. Use this when you
 want counts by something the model does not store as a plain column;
 `POST /deliverable/group-and-count` covers raw columns.
 

@@ -7,18 +7,16 @@ Almost every time you want to get rid of something, you want to archive it, not
 delete it. Archiving is reversible, it cascades the way you would expect, and it
 keeps the history that timesheets and QC records depend on.
 
-`DELETE` is a real delete. The row is removed from the database, and related rows
-go with it or are cut loose. There is no undo and no trash to restore from.
+DELETE behavior depends on the resource. Some endpoints permanently remove records; materials catalogs, custom properties, trucks, contacts, and delivery lines use DELETE as an archive action. Check the table below before deleting.
 
 <Warning>
-  `DELETE` is permanent. BuildingSwell does not keep a copy, so a deleted order
+  A hard delete is permanent. BuildingSwell does not keep a copy, so a deleted order
   cannot be recovered from the API or from the app.
 </Warning>
 
 ## Archive instead
 
-Archiving is a normal update. There is no separate archive endpoint: you set
-`isArchived` and BuildingSwell does the rest.
+Most writable archivable resources use `isArchived`. Locations use DELETE to archive, and deliveries have `/archive` and `/restore` commands. Read-only organization lists do not expose archive writes. For projects, set `isArchived`:
 
 ```http
 PATCH /project/<id>
@@ -36,16 +34,16 @@ Content-Type: application/json
 { "isArchived": false }
 ```
 
-Three things happen when a record is archived:
+Archive behavior varies by resource:
 
-- The record's name or identifier is given an ` - (archived <timestamp>)` suffix so
+- Resources with collision handling can give the record's name or identifier an ` - (archived <timestamp>)` suffix so
   it stops colliding with your active records, where `<timestamp>` is the archive
   time in epoch milliseconds. Restoring strips the suffix, and picks the next free
   variant if something has taken the original name meanwhile. Match the suffix with
   a pattern rather than a literal string.
 - `archivedAt` is stamped with the current time, and cleared again on restore, for
   the resources that carry the field. Each resource page lists its own fields:
-  People and Stages have `isArchived` but no `archivedAt`.
+  People and Stages both carry `isArchived` and `archivedAt`.
 - Archived records drop out of reads, including reads by id.
 
 That last point catches people out. Filters default to `isArchived eq false`, so
@@ -94,8 +92,7 @@ POST /deliverable/restore/batch
 ```
 
 <Note>
-  Not every resource is archivable. Work sessions, documents, and QC records have
-  no `isArchived` field, so for those the only removal is a delete.
+  Not every resource is archivable. Work sessions and QC records have no `isArchived` field. Documents do support archive and restore through `isArchived`; the Hub archived view uses `archived=true`.
 </Note>
 
 ## What each delete actually does
@@ -110,12 +107,24 @@ first, some are refused outright.
 | [Stage](/resources/stage) | Fails with `409` whenever a team or a route step is still assigned to the station. When it does go through, deliverable stage nodes keep a `data.stageId` that no longer resolves, since that link is JSON rather than a foreign key. |
 | [Work session](/resources/deliverable-work-sessions) | Removes the session and its hours. No archive exists for sessions. |
 | [Dependency](/resources/deliverable-dependencies) | Removes the link and re-rolls the successor's dates. Both deliverables stay. |
-| [Document](/resources/document) | Removes the document record. |
+| [Document](/resources/document) | Permanently removes the document. PATCH `isArchived` to retain it instead. |
 | [QC inspection set](/resources/qc-inspection-set) | Removes the set and the inspections under it, which is your QC record for that work. |
 | [QC template](/resources/qc-template) | Fails with `409` while any inspection set still references the version. |
 | [Person](/resources/worker) | Always fails with `403`. People are archived, never deleted. |
 | [Role](/resources/role) | Removes the role. Users assigned to it are left without permissions. |
 | [User](/resources/organization-member) | Removes the membership and cuts the person's access. Deactivate instead. |
+
+### Resources added with materials and delivery
+
+| Resource | Removal behavior |
+| --- | --- |
+| Items, BOM lines, production outputs, units of measure, vendors, trucks, contacts, custom properties, delivery lines | DELETE archives; PATCH `isArchived: false` restores, subject to resource constraints. |
+| Locations | DELETE archives the location and active descendants. PATCH only accepts `isArchived: false` for restoration. |
+| Deliveries | Use POST `/delivery/{id}/archive` or `/restore`; generic PATCH rejects archive fields. |
+| Inventory stock and allocations | Generic delete/write routes are not registered. Stock has empty-row cleanup actions. |
+| Inventory transactions | Append-only posting; no PATCH, upsert, or DELETE. |
+| Teams, shifts, departments | Read-only v2 endpoints; manage in the application. |
+| Item vendors and project contacts | DELETE removes the relationship, preserving the linked entities. |
 
 ### Deleting a deliverable relinks before it removes
 
@@ -146,7 +155,7 @@ Archive the order instead.
 
 ## Bulk delete does not exist
 
-`DELETE /<resource>/bulk` returns `403` on every resource. A broad filter can never
+On writable factory resources, `DELETE /<resource>/bulk` returns `403`. Read-only resources do not register that route. A broad filter can never
 wipe out a table in one call, by design. Archive them in bulk instead, or delete
 them one at a time on the resources where a single delete is allowed at all. People
 are not one of them: `DELETE /worker/{id}` returns `403` too.

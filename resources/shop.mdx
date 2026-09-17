@@ -1,0 +1,26 @@
+---
+title: "Departments (shops)"
+description: "Read-only departments, called shops in the API."
+---
+
+Base path: `/shop` (relative to your instance’s `/api/v2`).
+
+The standard list, single-record read, query, count, and group-and-count endpoints are available. Generic write routes are not registered.
+
+**Search columns:** `name`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Read-only. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `isArchived` | boolean | Read-only. |
+| `archivedAt` | date-time \| null | Read-only. |
+| `name` | string | Read-only. |
+| `timezone` | string | Read-only. |
+| `isProductionShop` | boolean | Read-only. |
+
+Departments are called `shop` in the API. `timezone` is an IANA timezone, and `isProductionShop` distinguishes production departments. These v2 endpoints expose reads only; manage departments in the application.

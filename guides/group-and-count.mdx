@@ -105,13 +105,10 @@ Each aggregate takes an `aggregate` function, an `alias` to return it under, and
 `field` for every function except `COUNT`. The functions are `COUNT`,
 `COUNT_DISTINCT`, `SUM`, `MIN`, `MAX`, and `AVG`.
 
-Two limits are worth knowing before you build on this:
+A grouped query must select only grouped fields or aggregate expressions:
 
 - `groupBy` does not combine with a `join` that selects fields — those come back
   as un-grouped expressions. Group on the resource's own fields instead.
-- Some resources always project computed or joined fields, `deliverable` among
-  them, so `groupBy` is refused there with a `400`. Use
-  `POST /deliverable/group-and-count`, or the domain-aware
-  [`POST /deliverable/groups`](/resources/deliverable#group-by-a-domain-dimension).
+- Computed fields that you select must also satisfy grouping rules. Deliverable grouped queries can select stored nested paths and aggregates without automatically adding unrelated computed fields. See [custom-property totals](/resources/custom-property#filter-select-and-aggregate).
 
 Each of these is a `400` that names the field or resource at fault.

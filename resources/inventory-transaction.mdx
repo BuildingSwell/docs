@@ -1,0 +1,47 @@
+---
+title: "Inventory transactions"
+description: "The inventory ledger and its posting rules."
+---
+
+Base path: `/inventory-transaction` (relative to your instance’s `/api/v2`).
+
+The standard list, single-record read, query, count, and group-and-count endpoints are available. A restricted single-object POST is also available; other generic writes are not registered.
+
+**Search columns:** `reason`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Immutable after posting. |
+| `organizationId` | uuid | Organization from your API key. Immutable after posting. |
+| `createdAt` | date-time | Immutable after posting. |
+| `updatedAt` | date-time | Immutable after posting. |
+| `itemId` | uuid | Immutable after posting. |
+| `shopId` | uuid | Immutable after posting. |
+| `type` | string | `receipt`, `consume`, `transfer`, `adjust`, `produce`, `ship`, `return`. Immutable after posting. |
+| `quantity` | number | Immutable after posting. |
+| `unitMeasureId` | uuid \| null | Immutable after posting. |
+| `unitCost` | number \| null | Immutable after posting. |
+| `fromLocationId` | uuid \| null | Immutable after posting. |
+| `toLocationId` | uuid \| null | Immutable after posting. |
+| `deliverableId` | uuid \| null | Immutable after posting. |
+| `deliveryId` | uuid \| null | Immutable after posting. |
+| `pickLineId` | uuid \| null | Immutable after posting. |
+| `source` | string | `manual`, `import`, `scan`, `count`, `integration`. Immutable after posting. |
+| `reason` | string \| null | Immutable after posting. |
+| `appUserId` | uuid \| null | Immutable after posting. |
+| `metadata` | object | Immutable after posting. |
+
+Quantities use the item’s base unit. `adjust` is a signed delta at the destination (or source when no destination is provided). `transfer` moves a nonnegative quantity between two locations in the same department. `return` removes a nonnegative quantity from `fromLocationId`. The posting location determines `shopId`; a supplied department cannot override it.
+
+## Post a transaction
+
+`POST /inventory-transaction` accepts **one object**, with `itemId`, `type`, and `quantity` required. Only `adjust`, `transfer`, and `return` are accepted here. Supply the relevant source/destination location; the posting service resolves and validates the department and updates stock atomically. Transactions cannot be patched, upserted, or deleted through this API.
+
+```json
+{ "itemId": "<uuid>", "type": "transfer", "quantity": 10,
+  "fromLocationId": "<uuid>", "toLocationId": "<uuid>", "source": "integration" }
+```
+
+`receipt` goes through `POST /delivery/{id}/receive`; `consume` and `produce` go through the [production actions](/resources/production-output); `ship` is posted by outbound delivery completion. Posting a ledger row directly would skip those workflows. Inventory posting requires item update permission.

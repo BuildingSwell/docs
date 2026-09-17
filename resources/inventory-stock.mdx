@@ -1,0 +1,26 @@
+---
+title: "Inventory stock"
+description: "Read-only quantities by item and location."
+---
+
+Base path: `/inventory-stock` (relative to your instance’s `/api/v2`).
+
+The standard list, single-record read, query, count, and group-and-count endpoints are available. Generic write routes are not registered.
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Read-only. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `itemId` | uuid | Read-only. |
+| `locationId` | uuid | Read-only. |
+| `quantityOnHand` | number | Read-only. |
+
+## Change stock through transactions
+
+This is a derived balance. Generic create, update, upsert, and delete routes are not registered. Use [inventory transactions](/resources/inventory-transaction), [receiving](/resources/delivery), or [production](/resources/production-output).
+
+For housekeeping, `POST /inventory-stock/{id}/remove` removes an empty balance row; `POST /inventory-stock/remove-empty` takes `{ "locationId": "<uuid>" }` to remove empty rows at a location. Both return `{ "value": { "removed": ... } }`. These actions require item update permission and do not dispose of nonzero stock.

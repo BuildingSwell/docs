@@ -1,0 +1,30 @@
+---
+title: "Units of measure"
+description: "Reusable names and abbreviations for quantities."
+---
+
+Base path: `/unit-measure` (relative to your instance’s `/api/v2`).
+
+The [standard endpoints](/guides/standard-endpoints) provide reads and writes, subject to the constraints below.
+
+**Search columns:** `name`, `shortName`, `identifier`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Optional on create; see constraints below. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `isArchived` | boolean | Optional on create; see constraints below. |
+| `archivedAt` | date-time \| null | Read-only. |
+| `name` | string | Required on create. |
+| `identifier` | string | Optional on create; see constraints below. |
+| `shortName` | string | Required on create. |
+
+Both `name` and `shortName` are required. Reference a unit by its ID from items, BOM lines, delivery lines, and numeric [custom properties](/resources/custom-property). Archiving preserves existing references.
+
+## Archive and restore
+
+DELETE archives this resource. Restore it with `PATCH /unit-measure/{id}` and `{ "isArchived": false }`. See [archiving and deleting](/guides/archiving-and-deleting).

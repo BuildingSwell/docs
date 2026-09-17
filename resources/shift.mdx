@@ -1,0 +1,26 @@
+---
+title: "Shifts"
+description: "Read-only department shifts."
+---
+
+Base path: `/shift` (relative to your instance’s `/api/v2`).
+
+The standard list, single-record read, query, count, and group-and-count endpoints are available. Generic write routes are not registered.
+
+**Search columns:** `name`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Read-only. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `isArchived` | boolean | Read-only. |
+| `archivedAt` | date-time \| null | Read-only. |
+| `shopId` | uuid | Read-only. |
+| `name` | string | Read-only. |
+| `weekDayWorkHours` | object | Read-only. |
+
+`shopId` identifies the department. `weekDayWorkHours` holds the shift's weekday schedule. Times in that schedule are local wall-clock values; use the department's IANA `timezone`. These v2 endpoints expose reads only; manage shifts in the application.

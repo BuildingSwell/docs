@@ -1,0 +1,38 @@
+---
+title: "Contacts"
+description: "Drivers, receivers, and other business contacts."
+---
+
+Base path: `/contact` (relative to your instance’s `/api/v2`).
+
+The [standard endpoints](/guides/standard-endpoints) provide reads and writes, subject to the constraints below.
+
+**Search columns:** `name`, `email`, `phone`, `title`, `companyName`, `identifier`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Optional on create; see constraints below. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `isArchived` | boolean | Optional on create; see constraints below. |
+| `archivedAt` | date-time \| null | Read-only. |
+| `name` | string | Required on create. |
+| `identifier` | string | Optional on create; see constraints below. |
+| `email` | string \| null | Optional on create; see constraints below. |
+| `phone` | string \| null | Optional on create; see constraints below. |
+| `title` | string \| null | Optional on create; see constraints below. |
+| `companyName` | string \| null | Optional on create; see constraints below. |
+| `vendorId` | uuid \| null | Optional on create; see constraints below. |
+| `role` | string \| null | Optional on create; see constraints below. |
+| `isPrimary` | boolean | Optional on create; see constraints below. |
+| `notes` | string \| null | Optional on create; see constraints below. |
+| `metadata` | object | Optional on create; see constraints below. |
+
+Only `name` is required. Use `vendorId` for supplier contacts and [project contacts](/resources/project-contact) for project relationships. Deliveries use `driverContactId` and `receiverContactId`; these are contact IDs, not worker IDs. DELETE archives the contact.
+
+## Archive and restore
+
+DELETE archives this resource. Restore it with `PATCH /contact/{id}` and `{ "isArchived": false }`. See [archiving and deleting](/guides/archiving-and-deleting).

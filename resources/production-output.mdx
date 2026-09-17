@@ -1,0 +1,58 @@
+---
+title: "Production outputs"
+description: "Declarations of manufactured outputs."
+---
+
+Base path: `/production-output` (relative to your instance’s `/api/v2`).
+
+The [standard endpoints](/guides/standard-endpoints) provide reads and writes, subject to the constraints below.
+
+**Search columns:** `identifier`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Optional on create; see constraints below. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `isArchived` | boolean | Optional on create; see constraints below. |
+| `archivedAt` | date-time \| null | Read-only. |
+| `name` | string | Optional on create; see constraints below. |
+| `identifier` | string | Optional on create; see constraints below. |
+| `itemId` | uuid | Required on create. |
+| `routeDeliverableId` | uuid \| null | Optional on create; see constraints below. |
+| `orderDeliverableId` | uuid \| null | Optional on create; see constraints below. |
+| `producedPerUnit` | number \| null | Optional on create; see constraints below. |
+| `quantity` | number \| null | Optional on create; see constraints below. |
+| `quantityActual` | number | Optional on create; see constraints below. |
+| `locationId` | uuid \| null | Optional on create; see constraints below. |
+| `unitMeasureId` | uuid \| null | Optional on create; see constraints below. |
+| `source` | string | `manual`, `route_template`, `adhoc`. Optional on create; see constraints below. |
+| `sortOrder` | number | Optional on create; see constraints below. |
+| `notes` | string \| null | Optional on create; see constraints below. |
+| `metadata` | object | Optional on create; see constraints below. |
+
+## Declarations and actual production
+
+Supply `itemId` and exactly one of `routeDeliverableId` or `orderDeliverableId`. Route declarations use a positive `producedPerUnit` or `quantity`; order declarations use a positive `quantity`. These rows describe planned output. Creating one does not post stock.
+
+`POST /production/produce` records output, and `POST /production/consume` records input usage. They are separate operations: producing does not automatically consume.
+
+```http
+POST /production/produce
+Content-Type: application/json
+
+{ "deliverableId": "<uuid>", "quantityProduced": 5, "outputLocationId": "<uuid>" }
+```
+
+For explicit output quantities, pass `outputs: [{ "itemId": "<uuid>", "quantity": 5 }]`. For consumption, pass `lines: [{ "itemId": "<uuid>", "quantity": 10 }]` and optionally `fromLocationId`.
+
+Correct a recorded actual with `POST /production/adjust-actual`: `{ "stampDeliverableId": "<uuid>", "kind": "consume", "itemId": "<uuid>", "delta": -2 }`. `kind` is `consume` or `produce`; the nonzero signed delta adds or reverses usage/output. These actions return `{ "value": ... }` and require item update permission.
+
+`GET /production/order/{id}/status` and `GET /production/order/{id}/entries` read an order's production status and trace. Use the order deliverable ID.
+
+## Archive and restore
+
+DELETE archives this resource. Restore it with `PATCH /production-output/{id}` and `{ "isArchived": false }`. See [archiving and deleting](/guides/archiving-and-deleting).

@@ -1,0 +1,28 @@
+---
+title: "Inventory allocations"
+description: "Read-only reservations for orders and projects."
+---
+
+Base path: `/inventory-allocation` (relative to your instance’s `/api/v2`).
+
+The standard list, single-record read, query, count, and group-and-count endpoints are available. Generic write routes are not registered.
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Read-only. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `itemId` | uuid | Read-only. |
+| `deliverableId` | uuid \| null | Read-only. |
+| `projectId` | uuid \| null | Read-only. |
+| `quantityAllocated` | number | Read-only. |
+| `quantityConsumed` | number | Read-only. |
+| `status` | string | `open`, `fulfilled`, `cancelled`. Read-only. |
+| `isArchived` | boolean | Read-only. |
+
+Each reservation belongs to exactly one `deliverableId` or `projectId`. `quantityConsumed` records the used portion; statuses are `open`, `fulfilled`, and `cancelled`.
+
+Generic writes are not registered. Reserve through `POST /bom-line/order/{id}/allocate` or `POST /bom-line/project/{id}/allocate`. Consumption and release commands maintain reservations. See [BOM lines](/resources/bom-line).

@@ -1,0 +1,39 @@
+---
+title: "Trucks"
+description: "Fleet vehicles and their capacity."
+---
+
+Base path: `/truck` (relative to your instance’s `/api/v2`).
+
+The [standard endpoints](/guides/standard-endpoints) provide reads and writes, subject to the constraints below.
+
+**Search columns:** `name`, `code`, `identifier`
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | Unique record ID. Optional on create; see constraints below. |
+| `organizationId` | uuid | Organization from your API key. Read-only. |
+| `createdAt` | date-time | Read-only. |
+| `updatedAt` | date-time | Read-only. |
+| `isArchived` | boolean | Optional on create; see constraints below. |
+| `archivedAt` | date-time \| null | Read-only. |
+| `name` | string | Required on create. |
+| `identifier` | string | Optional on create; see constraints below. |
+| `code` | string \| null | Optional on create; see constraints below. |
+| `type` | string | `tractor`, `box_truck`, `flatbed_truck`, `stake_truck`, `pickup`, `van`, `other`. Optional on create; see constraints below. |
+| `status` | string | `active`, `inactive`. Optional on create; see constraints below. |
+| `maxPayloadLb` | integer \| null | Optional on create; see constraints below. |
+| `emptyWeightLb` | integer \| null | Optional on create; see constraints below. |
+| `deckLengthFt` | number \| null | Optional on create; see constraints below. |
+| `deckWidthFt` | number \| null | Optional on create; see constraints below. |
+| `maxHeightFt` | number \| null | Optional on create; see constraints below. |
+| `notes` | string \| null | Optional on create; see constraints below. |
+| `metadata` | object | Optional on create; see constraints below. |
+
+Only `name` is required. Weight fields are pounds; deck dimensions and maximum height are feet. Capacity values must be positive when supplied. Link a delivery with `truckId`; `truck` on the delivery is its legacy free-text label. DELETE archives the truck.
+
+## Archive and restore
+
+DELETE archives this resource. Restore it with `PATCH /truck/{id}` and `{ "isArchived": false }`. See [archiving and deleting](/guides/archiving-and-deleting).

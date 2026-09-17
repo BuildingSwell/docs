@@ -43,3 +43,7 @@ If the Mintlify MCP server is enabled in Cursor Settings, you can use `checkout`
 | `concepts/` | Domain concepts layer |
 | `api-reference/` | API reference tab overview |
 | `images/logo/` | BuildingSwell logos |
+
+## Keeping the reference current
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the cross-repository audit checklist and the implementation revision used for the latest API coverage pass.
