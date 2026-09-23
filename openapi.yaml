@@ -13726,8 +13726,7 @@ paths:
                 type: object
                 properties:
                   value:
-                    type: object
-                    additionalProperties: true
+                    $ref: '#/components/schemas/DeliveryCompletionResult'
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -13745,8 +13744,9 @@ paths:
         schema:
           type: string
           format: uuid
-      description: Omitted lines use loaded quantities. A configured confirmation form must be submitted.
-        Returns delivery plus advancement results.
+      description: Settles the trip. `lines` gives delivered quantities for material lines and `cargo` gives delivered units per pack.
+        A pack left out of `cargo` settles at its loaded units when marked delivered and at 0 otherwise. A configured confirmation form must be submitted first.
+        Units a pack did not deliver return to the deliverable's unallocated quantity.
       requestBody:
         required: true
         content:
@@ -13767,6 +13767,26 @@ paths:
                     required:
                     - lineId
                     - quantityActual
+                  description: Delivered quantity per material line, between 0 and the line's expected quantity. Omitted lines keep a recorded actual, else ship in full.
+                cargo:
+                  type: array
+                  description: Delivered units per pack, between 0 and the units on board (`quantityLoaded`, else `quantityAllocated`).
+                  items:
+                    type: object
+                    properties:
+                      deliverableId:
+                        type: string
+                        format: uuid
+                      quantityActual:
+                        type: integer
+                        minimum: 0
+                    required:
+                    - deliverableId
+                    - quantityActual
+            example:
+              cargo:
+              - deliverableId: 3f0c9a52-6f5e-4c8e-9a51-7a1c2b3d4e5f
+                quantityActual: 2
   /delivery/{id}/itinerary:
     get:
       tags:
@@ -13814,8 +13834,7 @@ paths:
                 type: object
                 properties:
                   value:
-                    type: object
-                    additionalProperties: true
+                    $ref: '#/components/schemas/DeliveryCargoPlan'
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -13833,6 +13852,321 @@ paths:
         schema:
           type: string
           format: uuid
+  /delivery/{id}/cargo-plan/progress:
+    post:
+      tags:
+      - Deliveries
+      summary: Record cargo loaded and delivered
+      description: Records packs going on and coming off the truck, and the driver's load decision. Works while the trip runs; refused once the delivery is archived, delivered, received, or cancelled. Requires delivery update permission. `null` clears a mark and an omitted field leaves it unchanged. Entries are validated together, so one bad entry rejects the whole request.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                entries:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items:
+                    type: object
+                    description: Set `loadedAt`, `unloadedAt`, or both. Each deliverable may appear once per request.
+                    properties:
+                      deliverableId:
+                        type: string
+                        format: uuid
+                      loadedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      unloadedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      quantityLoaded:
+                        type: integer
+                        minimum: 0
+                        nullable: true
+                        description: Sent with `loadedAt`. Omitted or `null` loads the whole allocation. `0` means not loaded and needs a `notLoadedReason` and a `loadedAt` of `null`. A positive count needs a `loadedAt` and may not exceed `quantityAllocated`.
+                      notLoadedReason:
+                        allOf:
+                        - $ref: '#/components/schemas/CargoNotLoadedReason'
+                        nullable: true
+                    required:
+                    - deliverableId
+              required:
+              - entries
+            example:
+              entries:
+              - deliverableId: 3f0c9a52-6f5e-4c8e-9a51-7a1c2b3d4e5f
+                loadedAt: '2026-09-23T13:05:00Z'
+                quantityLoaded: 2
+              - deliverableId: 8b7d1e20-2c4a-4f9b-8e3d-1a2b3c4d5e6f
+                loadedAt: null
+                quantityLoaded: 0
+                notLoadedReason: damaged
+      responses:
+        '200':
+          description: The updated cargo plan.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    $ref: '#/components/schemas/DeliveryCargoPlan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /delivery/cargo-allocations/query:
+    post:
+      tags:
+      - Deliveries
+      summary: Query cargo allocations
+      description: For each deliverable, returns its quantity, the units no delivery holds yet, and the deliveries holding the rest. Requires delivery read permission. Deliverables your key cannot read are left out of the result.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deliverableIds:
+                  type: array
+                  minItems: 1
+                  maxItems: 1000
+                  items:
+                    type: string
+                    format: uuid
+              required:
+              - deliverableIds
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  values:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CargoAllocationSummary'
+              example:
+                values:
+                - deliverableId: 3f0c9a52-6f5e-4c8e-9a51-7a1c2b3d4e5f
+                  quantity: 6
+                  remaining: 1
+                  allocations:
+                  - deliveryId: 0d4e8f6a-1b2c-4d3e-8f9a-0b1c2d3e4f5a
+                    label: DEL-00118
+                    deliveryName: Trip B
+                    quantityConsumed: 3
+                    delivered: true
+                  - deliveryId: ''
+                    label: Another delivery
+                    quantityConsumed: 2
+                    delivered: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /delivery/{id}/cargo:
+    post:
+      tags:
+      - Deliveries
+      summary: Add cargo to a delivery
+      description: Adds one deliverable to an outbound or transfer trip's cargo, with its allocation and partial-shipment mark, in one transaction. Only allowed before the trip starts. Requires delivery update permission and access to the deliverable.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deliverableId:
+                  type: string
+                  format: uuid
+                quantityAllocated:
+                  type: integer
+                  minimum: 1
+                  description: Units for this trip. Omit to take everything still unallocated. Must be between 1 and the unallocated quantity.
+                partialShipment:
+                  type: boolean
+                  description: Sets `data.partialDelivery` on the deliverable. Only single-unit deliverables can ship in pieces.
+              required:
+              - deliverableId
+      responses:
+        '200':
+          description: The updated cargo plan.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    $ref: '#/components/schemas/DeliveryCargoPlan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /delivery/{id}/cargo/remove:
+    post:
+      tags:
+      - Deliveries
+      summary: Remove cargo from a delivery
+      description: Takes one deliverable off this trip. Only allowed before the trip starts. Removing a deliverable that is not aboard does nothing.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deliverableId:
+                  type: string
+                  format: uuid
+              required:
+              - deliverableId
+      responses:
+        '200':
+          description: The updated cargo plan.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    $ref: '#/components/schemas/DeliveryCargoPlan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /delivery/{id}/cargo/partial-shipment:
+    post:
+      tags:
+      - Deliveries
+      summary: Set a pack's partial-shipment mark
+      description: Marks a deliverable already on this trip as shipping in pieces across several deliveries, or clears the mark. Writes only `data.partialDelivery`; the rest of the deliverable's `data` is untouched. Only allowed before the trip starts. Only single-unit deliverables can be marked, and the mark cannot be cleared while the pack rides more than one delivery.
+      parameters:
+      - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deliverableId:
+                  type: string
+                  format: uuid
+                partialShipment:
+                  type: boolean
+              required:
+              - deliverableId
+              - partialShipment
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    type: object
+                    properties:
+                      deliverableId:
+                        type: string
+                        format: uuid
+                      partialShipment:
+                        type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /delivery-public/{token}:
+    get:
+      tags:
+      - Deliveries
+      summary: Read the driver page
+      description: The no-login view behind a trip's driver link. The token in the path is the credential, so this route takes no API key. Rate-limited per IP address.
+      security: []
+      parameters:
+      - name: token
+        in: path
+        required: true
+        description: The delivery's `publicToken`.
+        schema:
+          type: string
+          minLength: 16
+      responses:
+        '200':
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    type: object
+                    additionalProperties: true
+                    properties:
+                      identifier:
+                        type: string
+                        nullable: true
+                      name:
+                        type: string
+                      direction:
+                        type: string
+                      status:
+                        type: string
+                      cargo:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DeliveryPublicCargoItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
   /document/hub:
     get:
       tags:
@@ -19696,6 +20030,297 @@ components:
         data:
           type: object
           additionalProperties: true
+    CargoNotLoadedReason:
+      type: string
+      enum:
+      - damaged
+      - not_ready
+      - no_room
+      - other
+      description: Why the driver left a pack at the load stop. Set only with a `quantityLoaded` of `0`.
+    CargoAllocationElsewhere:
+      type: object
+      description: Another delivery holding units of the same deliverable. When your key cannot read that delivery, `deliveryId` is an empty string, `label` is `Another delivery`, and `deliveryName` is omitted. Its units still count.
+      properties:
+        deliveryId:
+          type: string
+          description: The other delivery's ID, or an empty string when your key cannot read it.
+        label:
+          type: string
+          description: The other delivery's identifier (for example `DEL-00118`), else its name.
+        deliveryName:
+          type: string
+          description: The other delivery's name. Omitted when your key cannot read that delivery.
+        quantityConsumed:
+          type: integer
+          description: Units that delivery takes from the pool. While the trip is live this is the units on board (`quantityLoaded`, else `quantityAllocated`); once it has completed, the delivered actual.
+        delivered:
+          type: boolean
+          description: This pack came off the truck on that delivery. A completed trip still reports `false` for a pack that stayed aboard.
+      required:
+      - deliveryId
+      - label
+      - quantityConsumed
+      - delivered
+    DeliveryCargoSpan:
+      type: object
+      description: One deliverable's ride on one delivery.
+      properties:
+        id:
+          type: string
+          format: uuid
+        deliveryId:
+          type: string
+          format: uuid
+        deliverableId:
+          type: string
+          format: uuid
+        quantityAllocated:
+          type: integer
+          minimum: 1
+          description: Units of the deliverable planned for this delivery.
+        quantityLoaded:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: Units the driver put on the truck. `null` means undecided and reads as the whole allocation. `0` means not loaded, with a `notLoadedReason`, and those units go back to planning at once.
+        notLoadedReason:
+          allOf:
+          - $ref: '#/components/schemas/CargoNotLoadedReason'
+          nullable: true
+        quantityActual:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: Units that came off the truck, stamped when the delivery completes. `null` while the trip is live, and on spans that predate per-unit actuals.
+        notes:
+          type: string
+          nullable: true
+          description: Planner note about this pack on this trip.
+        loadStopId:
+          type: string
+          format: uuid
+          nullable: true
+          description: '`null` means the cargo is already aboard when the itinerary begins.'
+        unloadStopId:
+          type: string
+          format: uuid
+        loadedAt:
+          type: string
+          format: date-time
+          nullable: true
+        unloadedAt:
+          type: string
+          format: date-time
+          nullable: true
+        otherAllocations:
+          type: array
+          description: Other deliveries holding units of this deliverable. Returned by `GET /delivery/{id}/cargo-plan` and by the cargo commands on this page.
+          items:
+            $ref: '#/components/schemas/CargoAllocationElsewhere'
+        quantityAvailable:
+          type: integer
+          description: The most this delivery may allocate for the deliverable. It is the deliverable's quantity less what other deliveries consume, and never less than this span's current allocation. Returned alongside `otherAllocations`.
+      required:
+      - id
+      - deliveryId
+      - deliverableId
+      - quantityAllocated
+      - loadStopId
+      - unloadStopId
+      - loadedAt
+      - unloadedAt
+    DeliveryCargoPlan:
+      type: object
+      properties:
+        deliveryId:
+          type: string
+          format: uuid
+        spans:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryCargoSpan'
+        stopManifests:
+          type: array
+          description: Deliverables loaded and unloaded at each stop. A pack marked not loaded stays in its load stop's list and never appears in an unload list.
+          items:
+            type: object
+            properties:
+              stopId:
+                type: string
+                format: uuid
+              loadDeliverableIds:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+              unloadDeliverableIds:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+        legManifests:
+          type: array
+          description: Deliverables aboard on each leg, derived from the spans. A pack marked not loaded rides no leg.
+          items:
+            type: object
+            properties:
+              legId:
+                type: string
+                format: uuid
+              deliverableIds:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+    CargoAllocationSummary:
+      type: object
+      properties:
+        deliverableId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          description: The deliverable's total quantity.
+        remaining:
+          type: integer
+          description: Units no delivery holds yet. Archived and completed deliveries still count, so read this from the server rather than subtracting a delivery list.
+        allocations:
+          type: array
+          description: Every delivery holding units of this deliverable.
+          items:
+            $ref: '#/components/schemas/CargoAllocationElsewhere'
+      required:
+      - deliverableId
+      - quantity
+      - remaining
+      - allocations
+    CargoItemRef:
+      type: object
+      description: A cargo item with enough context to find it. Phase names repeat across orders, so the identifier and order name come with it.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        identifier:
+          type: string
+        orderName:
+          type: string
+          nullable: true
+          description: Name of the order the item sits under. `null` when the item is itself the order.
+      required:
+      - id
+      - name
+      - identifier
+      - orderName
+    DeliveryCompletionResult:
+      type: object
+      properties:
+        delivery:
+          $ref: '#/components/schemas/Delivery'
+        advanced:
+          type: array
+          description: Cargo items whose progress advanced.
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+        blocked:
+          type: array
+          description: Cargo that came off the truck but could not advance, for example because a form trigger refused it. The delivery still completes.
+          items:
+            allOf:
+            - $ref: '#/components/schemas/CargoItemRef'
+            - type: object
+              properties:
+                reason:
+                  type: string
+              required:
+              - reason
+        undelivered:
+          type: array
+          description: Packs that settled at zero units. They stayed on the truck, their progress is unchanged, and their units return to the deliverable's unallocated quantity.
+          items:
+            $ref: '#/components/schemas/CargoItemRef'
+        notLoaded:
+          type: array
+          description: Packs the driver marked not loaded. They never left the shop.
+          items:
+            $ref: '#/components/schemas/CargoItemRef'
+        shippedLines:
+          type: integer
+          description: Active material lines settled on this delivery.
+        movedItems:
+          type: integer
+      required:
+      - delivery
+      - advanced
+      - blocked
+      - undelivered
+      - notLoaded
+    DeliveryPublicCargoItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        orderPath:
+          type: array
+          items:
+            type: string
+        quantityAllocated:
+          type: integer
+          description: Units assigned to this trip.
+        hasSpan:
+          type: boolean
+          description: Whether the pack has a cargo span. Only span-backed packs can report a delivered quantity.
+        quantityLoaded:
+          type: integer
+          nullable: true
+          description: The driver's load decision. `null` is undecided (the whole allocation), `0` is not loaded, and any other value is a partial load.
+        notLoadedReason:
+          allOf:
+          - $ref: '#/components/schemas/CargoNotLoadedReason'
+          nullable: true
+        quantityActual:
+          type: integer
+          nullable: true
+          description: Units that came off this trip, stamped at completion.
+        partial:
+          type: boolean
+          description: The pack ships in pieces across several trips, so this truck carries only a piece of it.
+        loadStopId:
+          type: string
+          format: uuid
+          nullable: true
+        unloadStopId:
+          type: string
+          format: uuid
+          nullable: true
+        loadedAt:
+          type: string
+          format: date-time
+          nullable: true
+        unloadedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - id
+      - name
+      - orderPath
+      - quantityAllocated
+      - partial
+      - loadedAt
+      - unloadedAt
     DeliveryLine:
       type: object
       properties:
