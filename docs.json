@@ -672,7 +672,13 @@
               "POST /delivery/{id}/restore",
               "POST /delivery/{id}/complete",
               "GET /delivery/{id}/itinerary",
-              "GET /delivery/{id}/cargo-plan"
+              "GET /delivery/{id}/cargo-plan",
+              "POST /delivery/{id}/cargo-plan/progress",
+              "POST /delivery/cargo-allocations/query",
+              "POST /delivery/{id}/cargo",
+              "POST /delivery/{id}/cargo/remove",
+              "POST /delivery/{id}/cargo/partial-shipment",
+              "GET /delivery-public/{token}"
             ]
           },
           {

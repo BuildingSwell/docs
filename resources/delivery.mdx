@@ -90,3 +90,109 @@ them through `PATCH /delivery/{id}/outbound`. `publicToken`,
 </Warning>
 
 Read a trip's stops and legs with `GET /delivery/{id}/itinerary`, and cargo spans with `GET /delivery/{id}/cargo-plan`. Manifest lines are a separate [resource](/resources/delivery-line).
+
+## Cargo quantities and split deliveries
+
+A deliverable can ride more than one outbound or transfer trip. Each trip's share lives on its cargo span, which `GET /delivery/{id}/cargo-plan` returns in `spans`.
+
+| Span field | Type | Notes |
+| --- | --- | --- |
+| `quantityAllocated` | integer | Units planned for this trip. |
+| `quantityLoaded` | integer \| null | Units the driver loaded. `null` is undecided and counts as the whole allocation. `0` means not loaded. |
+| `notLoadedReason` | string \| null | `damaged`, `not_ready`, `no_room`, or `other`. Set only when `quantityLoaded` is `0`. |
+| `quantityActual` | integer \| null | Units delivered, stamped when the trip completes. `null` while the trip is live, and on spans created before per-unit actuals. |
+| `notes` | string \| null | Planner note about this pack on this trip. |
+| `otherAllocations` | array | Other trips holding the same deliverable. Each entry has `deliveryId`, `label`, `deliveryName`, `quantityConsumed`, and `delivered`. |
+| `quantityAvailable` | integer | The most this trip may allocate: the deliverable's quantity less what other trips consume, and never less than this span's allocation. |
+
+A live trip consumes its units on board: the allocation, or `quantityLoaded` once the driver records one. A pack marked not loaded consumes nothing. A completed trip consumes only what it delivered, so undelivered units become free again. Cancelled trips don't count.
+
+When your key can't read another trip, its entry keeps its units but hides who holds them: `deliveryId` is an empty string, `label` is `Another delivery`, and `deliveryName` is omitted.
+
+### Check what is still free
+
+```http
+POST /delivery/cargo-allocations/query
+Content-Type: application/json
+
+{ "deliverableIds": ["<uuid>", "<uuid>"] }
+```
+
+The response is `{ "values": [...] }`, one entry per readable deliverable, with its `quantity`, the `remaining` units no trip holds, and `allocations` listing every trip that holds the rest. Each allocation carries `deliveryName` next to its `label`, because an identifier such as `DEL-00118` doesn't say which trip it is. Send 1 to 1,000 IDs. Archived and completed trips still consume units, so read `remaining` here instead of subtracting a delivery list.
+
+### Add and remove cargo
+
+`POST /delivery/{id}/cargo` adds one deliverable to a trip with `deliverableId`, an optional `quantityAllocated`, and an optional `partialShipment`. Leave out `quantityAllocated` to take everything still free. A value above the free quantity returns `400`. `POST /delivery/{id}/cargo/remove` takes a deliverable off with `{ "deliverableId": "<uuid>" }`. Both return the updated cargo plan and need delivery update permission plus access to the deliverable.
+
+Cargo can only change before the trip starts. Once the delivery leaves `expected` or `scheduled`, or any stop or leg has started, these routes return `400`.
+
+### Ship one unit in pieces
+
+A single-unit deliverable can ship in pieces across several trips, such as a module whose parts need two trucks. Its partial-shipment flag is `data.partialDelivery` on the deliverable. Set it with `partialShipment` when you add the cargo, or on cargo already aboard with:
+
+```http
+POST /delivery/<id>/cargo/partial-shipment
+Content-Type: application/json
+
+{ "deliverableId": "<uuid>", "partialShipment": true }
+```
+
+This route writes only `data.partialDelivery` and leaves the rest of `data` alone. It returns `{ "value": { "deliverableId": "<uuid>", "partialShipment": true } }`.
+
+- Only deliverables with a quantity of 1 can be marked. Above one unit, allocate units per trip instead.
+- The flag can't be cleared while the deliverable rides more than one trip.
+- Like the other cargo routes, it's refused once the trip has started.
+
+A piece shipment's progress completes only when every trip carrying it has completed and none left its piece behind. If a piece stayed behind, completion lists the deliverable in `blocked` and the phase stays open for someone to finish in Planning.
+
+### Record loading and unloading
+
+`POST /delivery/{id}/cargo-plan/progress` records packs going on and coming off the truck while the trip runs. It needs delivery update permission and is refused once the delivery is archived or closed.
+
+```http
+POST /delivery/<id>/cargo-plan/progress
+Content-Type: application/json
+
+{ "entries": [
+  { "deliverableId": "<uuid>", "loadedAt": "2026-09-23T13:05:00Z", "quantityLoaded": 2 },
+  { "deliverableId": "<uuid>", "loadedAt": null, "quantityLoaded": 0, "notLoadedReason": "damaged" },
+  { "deliverableId": "<uuid>", "unloadedAt": "2026-09-23T15:40:00Z" }
+] }
+```
+
+Each entry sets `loadedAt`, `unloadedAt`, or both. `null` clears a mark and an omitted field leaves it alone. Send 1 to 500 entries, each deliverable at most once. The whole request is validated before anything is written.
+
+- Send `quantityLoaded` with `loadedAt`. Leave it out, or send `null`, to load the whole allocation.
+- `0` means not loaded. It needs a `notLoadedReason` and a `loadedAt` of `null`. Those units go back to planning immediately, and the pack can't be marked unloaded.
+- A positive count needs a `loadedAt` and can't exceed `quantityAllocated`. Raising a count, or re-loading a pack you marked not loaded, fails if another trip has since taken those units.
+- Cargo already aboard before the first stop (no `loadStopId`) can't be marked loaded.
+
+The response is the updated cargo plan.
+
+### Complete with delivered quantities
+
+`POST /delivery/{id}/complete` accepts per-pack delivered units in `cargo`, next to the per-line `lines`:
+
+```http
+POST /delivery/<id>/complete
+Content-Type: application/json
+
+{ "cargo": [ { "deliverableId": "<uuid>", "quantityActual": 2 } ] }
+```
+
+Each `quantityActual` must be a whole number from 0 to the units on board (`quantityLoaded`, else `quantityAllocated`). A pack you leave out settles at its units on board if it was marked unloaded, and at 0 if it wasn't. Completion stamps the result on the span's `quantityActual`, and any shortfall returns to the deliverable's free quantity.
+
+The response `value` holds the `delivery` and these lists:
+
+| Field | Contents |
+| --- | --- |
+| `advanced` | Cargo whose progress moved forward, as `id` and `name`. |
+| `blocked` | Cargo that came off the truck but couldn't advance, for example because a form must be submitted first, with a `reason`. The trip still completes. |
+| `undelivered` | Packs that settled at 0. They stayed on the truck and their progress is unchanged. |
+| `notLoaded` | Packs the driver marked not loaded. They never left the shop. |
+
+Entries in `blocked`, `undelivered`, and `notLoaded` carry `id`, `name`, `identifier`, and `orderName`, the order the item sits under, since phase names repeat across orders. `orderName` is `null` when the item is itself the order.
+
+### Driver page
+
+`GET /delivery-public/{token}` returns the no-login driver page for a trip's `publicToken`. The token is the credential, so the route takes no API key. It is rate-limited per IP address. Each item in its `cargo` array carries `quantityAllocated`, `quantityLoaded`, `notLoadedReason`, `quantityActual`, and `partial`, which is `true` when the truck carries only a piece of the deliverable. When the driver completes from that page, the response has the same `advanced`, `blocked`, `undelivered`, and `notLoaded` lists beside the refreshed page view.
