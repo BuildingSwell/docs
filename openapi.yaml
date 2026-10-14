@@ -13173,6 +13173,11 @@ paths:
                         format: uuid
                       quantity:
                         type: number
+                      fromLocationId:
+                        type: string
+                        format: uuid
+                        nullable: true
+                        description: Where this line's item was drawn from. Overrides the request-level fromLocationId for this line.
                     required:
                     - itemId
                     - quantity
@@ -13180,6 +13185,7 @@ paths:
                   type: string
                   format: uuid
                   nullable: true
+                  description: Where to draw lines that don't name their own fromLocationId.
                 stampDeliverableId:
                   type: string
                   format: uuid

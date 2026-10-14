@@ -61,14 +61,37 @@ service creates ad-hoc declarations for them. When declarations already exist,
 an explicit `outputs` list may name only those items. An empty `outputs` array
 is rejected.
 
+Produced parts land at the first location that applies:
+
+1. `outputLocationId`, else the declaration's own `locationId`.
+2. The stage's work location: where its work is recorded, else where the stage
+   is planned. A step uses its stage's location.
+3. The item's default location.
+4. Where this node's previous run put the part.
+5. The one location already holding the part.
+
+When none applies, the request is rejected and names the item.
+
 For consumption, `lines` provides per-item quantity overrides for the node's own
 BOM lines. Items outside that BOM are ignored. Omit `lines` to draw the full
-recipe; an empty array is rejected. Pass `fromLocationId`, or make sure each
-stock-drawing item has a default location, so the ledger knows where to draw.
+recipe; an empty array is rejected.
+
+Each line may name its own `fromLocationId`; the request-level `fromLocationId`
+applies to lines that don't. Without either, an item is drawn from:
+
+1. a location where this order already holds it, such as where it was picked or
+   produced for the order (the item's default location first among them);
+2. the item's default location;
+3. the one location holding the item's stock.
+
+When nothing applies, for example a material that was never received and has no
+default location, the request is rejected and names the item. Pass a
+`fromLocationId` for that line to record the draw; stock at that location goes
+negative until the material is received.
 
 Correct a recorded actual with `POST /production/adjust-actual`: `{ "stampDeliverableId": "<uuid>", "kind": "consume", "itemId": "<uuid>", "delta": -2 }`. `kind` is `consume` or `produce`; the nonzero signed delta adds or reverses usage/output. These actions return `{ "value": ... }` and require item update permission.
 
-`GET /production/order/{id}/status` and `GET /production/order/{id}/entries` read an order's production status and trace. Use the order deliverable ID.
+`GET /production/order/{id}/status` and `GET /production/order/{id}/entries` read an order's production status and trace. Use the order deliverable ID. Each status line includes `defaultLocationId`, the location a consume without a `fromLocationId` would draw from. It is null when nothing applies, and always null for items that draw no stock. When it is null, `locationChoices` lists the order department's locations (`locationId`, `name`, `onHand`) to pick from; otherwise it is empty.
 
 ## Archive and restore
 
