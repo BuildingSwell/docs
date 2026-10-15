@@ -65,6 +65,13 @@
             ]
           },
           {
+            "group": "User provisioning",
+            "icon": "users",
+            "pages": [
+              "guides/scim-user-provisioning"
+            ]
+          },
+          {
             "group": "Core concepts",
             "icon": "layers",
             "pages": [

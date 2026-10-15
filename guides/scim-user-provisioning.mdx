@@ -1,0 +1,151 @@
+---
+title: "SCIM user provisioning"
+description: "Provision and deactivate BuildingSwell users from your identity provider with SCIM 2.0."
+---
+
+BuildingSwell supports SCIM 2.0 user provisioning. Connect your identity provider to add,
+update, deactivate, and remove users from your organization without configuring SSO.
+
+SCIM provisioning is available to organization admins when SCIM is enabled for the
+organization. If **SCIM user provisioning** does not appear in **Integration Hub**, contact
+BuildingSwell support.
+
+## Configure SCIM
+
+1. Open **Integration Hub** and choose **SCIM user provisioning**.
+2. Select the custom role to assign to new users.
+3. Click **Configure SCIM**.
+4. Copy the provisioning endpoint and Bearer token into your identity provider.
+
+The token is shown once. Store it in your identity provider or secrets manager before you
+close the drawer.
+
+<Info>
+  You can keep up to two active tokens while rotating credentials. Create the replacement
+  token, update your identity provider, and then revoke the old token.
+</Info>
+
+## Connection settings
+
+Use these values in your identity provider:
+
+| Setting | Value |
+| --- | --- |
+| Base URL | `https://app.buildingswell.com/api/scim/v2` |
+| Authentication | Bearer token |
+| Content type | `application/scim+json` |
+
+For a different BuildingSwell host, replace `app.buildingswell.com` with that host.
+
+Every request must include the token in the `Authorization` header:
+
+```http
+Authorization: Bearer <scim-token>
+```
+
+The SCIM token is backed by an organization-scoped BuildingSwell API key, but the SCIM API
+accepts it only as a Bearer token. Do not send it in `X-API-Key`.
+
+## Supported endpoints
+
+| Method | Path | Behavior |
+| --- | --- | --- |
+| `GET` | `/ServiceProviderConfig` | Read supported SCIM capabilities |
+| `GET` | `/ResourceTypes` | List supported resource types |
+| `GET` | `/ResourceTypes/User` | Read the User resource type |
+| `GET` | `/Schemas` | List supported schemas |
+| `GET` | `/Schemas/{id}` | Read the SCIM User schema |
+| `GET` | `/Users` | List or filter provisioned users |
+| `POST` | `/Users` | Provision a user |
+| `GET` | `/Users/{id}` | Read a provisioned user |
+| `PUT` | `/Users/{id}` | Replace a provisioned user |
+| `PATCH` | `/Users/{id}` | Update selected user attributes |
+| `DELETE` | `/Users/{id}` | Deactivate the membership and remove it from SCIM |
+
+The API supports User resources only. Groups and bulk operations are not supported.
+
+## User attributes
+
+| Attribute | Required | Notes |
+| --- | --- | --- |
+| `userName` | Yes | Must contain a valid email when no email value is provided |
+| `externalId` | No | Identifier assigned by your identity provider |
+| `displayName` | No | Used as the BuildingSwell display name |
+| `name.formatted` | No | Used as a display-name fallback |
+| `name.givenName` | No | Used as a display-name fallback |
+| `name.familyName` | No | Used as a display-name fallback |
+| `emails` | No | The work, primary, or first email is used, in that order |
+| `active` | No | Defaults to `true`; set to `false` to deactivate access |
+
+Unknown attributes are accepted and ignored. Password changes are not supported.
+
+### Role and membership behavior
+
+- A new member receives the default custom role selected in **SCIM user provisioning**.
+- An existing member is matched by exact email and keeps their current role.
+- SCIM does not send invitation or organization-added emails.
+- Deactivating a member revokes their active sessions.
+- Deleting a SCIM User deactivates the organization membership and removes it from later
+  SCIM reads. It does not delete the BuildingSwell account.
+- Changing the email is rejected when the account belongs to more than one organization.
+
+Roles are not managed through SCIM. Change an existing member's role in BuildingSwell.
+
+## Filtering and pagination
+
+`GET /Users` accepts equality filters for `userName`, `externalId`, and work email. Join
+multiple clauses with `and`:
+
+```http
+GET /Users?filter=userName eq "ada@example.com"
+GET /Users?filter=externalId eq "idp-123"
+GET /Users?filter=emails[type eq "work"].value eq "ada@example.com"
+GET /Users?filter=userName eq "ada@example.com" and externalId eq "idp-123"
+```
+
+Other attributes, operators, and `or` expressions return `400` with
+`scimType: "invalidFilter"`.
+
+Pagination uses the SCIM `startIndex` and `count` query parameters. `startIndex` is one-based,
+`count` defaults to 100, and one request returns at most 200 users. Sorting is not supported.
+
+## PATCH operations
+
+Send the SCIM PatchOp schema and an `Operations` array:
+
+```json
+{
+  "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+  "Operations": [
+    { "op": "replace", "path": "displayName", "value": "Ada Lovelace" },
+    { "op": "replace", "path": "active", "value": false }
+  ]
+}
+```
+
+BuildingSwell supports `add`, `replace`, and `remove` for `externalId`, `displayName`, and
+the supported `name` fields. It supports `add` and `replace` for `userName`, `active`,
+`emails`, and `emails[type eq "work"].value`. Required login attributes cannot be removed.
+
+You can omit `path` when `value` is an object whose keys are supported paths.
+
+## Errors
+
+Errors use the SCIM error schema and `application/scim+json`:
+
+```json
+{
+  "schemas": ["urn:ietf:params:scim:api:messages:2.0:Error"],
+  "detail": "A valid work email is required in emails or userName.",
+  "status": "400",
+  "scimType": "invalidValue"
+}
+```
+
+A missing, invalid, revoked, or disconnected token returns `401`. A token without the needed
+SCIM action returns `403`.
+
+## Disconnect provisioning
+
+Choose **Disconnect SCIM** to revoke every active SCIM token. Existing memberships and their
+SCIM ownership records remain, so reconnecting does not duplicate users or change their roles.
